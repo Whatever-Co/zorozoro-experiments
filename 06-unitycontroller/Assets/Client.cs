@@ -69,57 +69,16 @@ public class Client
                         switch (command)
                         {
                             case "hello":
-                                switch (tokens[1])
-                                {
-                                    case "scanner":
-                                        mode = Mode.Scanner;
-                                        break;
-                                    case "bridge":
-                                        mode = Mode.Bridge;
-                                        break;
-                                }
-                                if (mode != Mode.NotInitialized)
-                                {
-                                    OnHello?.Invoke(this, mode);
-                                }
+                                HandleHello(tokens[1]);
                                 break;
                             case "advertised":
-                                if (tokens[3] == "toio Core Cube")
-                                {
-                                    Debug.Log("Found toio Cube!!!");
-                                    OnCubeFound?.Invoke(this, new Cube(tokens[1]));
-                                }
+                                HandleAdvertise(tokens[1], tokens[3]);
                                 break;
                             case "connected":
-                                IsBusy = false;
-                                if (connectingCube.Address == tokens[1])
-                                {
-                                    connectingCube.Bridge = this;
-                                    cubes.Add(connectingCube);
-                                    Debug.Log($"new cube {tokens[1]} added");
-                                }
-                                else
-                                {
-                                    Debug.LogWarning("???");
-                                }
-                                connectingCube = null;
+                                HandleConnected(tokens[1]);
                                 break;
                             case "disconnected":
-                                IsBusy = false;
-                                if (connectingCube != null)
-                                {
-                                    Debug.Log($"connect failed {connectingCube.Address}");
-                                    connectingCube = null;
-                                }
-                                else
-                                {
-                                    var remove = cubes.Where(c => c.Address == tokens[1] && c.Bridge == this).ToList();
-                                    foreach (var c in remove)
-                                    {
-                                        cubes.Remove(c);
-                                        Debug.Log("cube removed " + c.Address);
-                                    }
-                                }
+                                HandleDisconnected(tokens[1]);
                                 break;
                         }
                     }
@@ -137,6 +96,75 @@ public class Client
         finally
         {
             Stop();
+        }
+    }
+
+
+    private void HandleHello(string modeStr)
+    {
+        switch (modeStr)
+        {
+            case "scanner":
+                mode = Mode.Scanner;
+                break;
+            case "bridge":
+                mode = Mode.Bridge;
+                break;
+            default:
+                Debug.LogWarning("unknown mode " + modeStr);
+                break;
+        }
+        if (mode != Mode.NotInitialized)
+        {
+            OnHello?.Invoke(this, mode);
+        }
+
+    }
+
+
+    private void HandleAdvertise(string address, string name)
+    {
+        if (name == "toio Core Cube")
+        {
+            Debug.Log("Found toio Cube!!!");
+            OnCubeFound?.Invoke(this, new Cube(address));
+        }
+    }
+
+
+    private void HandleConnected(string address)
+    {
+        IsBusy = false;
+        if (connectingCube.Address == address)
+        {
+            connectingCube.Bridge = this;
+            cubes.Add(connectingCube);
+            Debug.Log($"new cube {address} added");
+        }
+        else
+        {
+            Debug.LogWarning("???");
+        }
+        connectingCube = null;
+    }
+
+
+    private void HandleDisconnected(string address)
+    {
+        IsBusy = false;
+        if (connectingCube != null)
+        {
+            Debug.Log($"connect failed {connectingCube.Address}");
+            connectingCube = null;
+        }
+        else
+        {
+            var remove = cubes.Where(c => c.Address == address && c.Bridge == this).ToList();
+            foreach (var c in remove)
+            {
+                cubes.Remove(c);
+                Debug.Log("cube removed " + c.Address);
+            }
         }
     }
 
