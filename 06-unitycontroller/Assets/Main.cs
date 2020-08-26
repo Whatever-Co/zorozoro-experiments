@@ -1,7 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Collections.Generic;
 using UnityEngine;
 
 
@@ -35,8 +36,18 @@ public class Main : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogException(e);
+            Debug.LogWarning(e);
         }
+
+        if (client == scanner)
+        {
+            scanner = null;
+        }
+        else
+        {
+            bridges.Remove(client);
+        }
+        Debug.Log($"Disconnected: {client}");
     }
 
 
@@ -47,24 +58,32 @@ public class Main : MonoBehaviour
         {
             case Client.Mode.Scanner:
                 scanner = client;
-                client.OnNewCube += OnNewCube;
+                scanner.OnCubeFound += OnCubeFound;
                 break;
             case Client.Mode.Bridge:
                 bridges.Add(client);
                 break;
         }
+        client.OnHello -= OnHello;
     }
 
 
-    private void OnNewCube(Client client, string address)
+    private void OnCubeFound(Client client, Cube cube)
     {
-        Debug.Log($"OnNewCube: {address}");
+        Debug.Log($"OnCubeFound: {cube}");
+        var bridge = bridges.Where(b => !b.IsBusy && b.NumConnectedCubes < Client.MAX_CUBES_PER_CLIENT).OrderBy(b => b.NumConnectedCubes).FirstOrDefault();
+        if (bridge == null)
+        {
+            Debug.LogWarning("no bridges available now...");
+            return;
+        }
+        bridge.Connect(cube);
     }
 
 
     void OnApplicationQuit()
     {
-        listener.Stop();
+        listener?.Stop();
         scanner?.Stop();
         foreach (var bridge in bridges)
         {
