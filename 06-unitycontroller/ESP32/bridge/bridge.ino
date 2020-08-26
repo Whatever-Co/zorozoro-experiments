@@ -11,7 +11,7 @@ const char *password = "0364276022";
 const char *controllerHost = "10.0.0.96";
 const int controllerPort = 12322;
 
-static WiFiClient client;
+static WiFiClient controller;
 static Cube *cubes[MAX_CUBES] = {nullptr};
 
 //----------------------------------------
@@ -41,6 +41,7 @@ void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, s
     if (characteristic->getUUID() == Cube::batteryCharUUID) {
         uint8_t value = data[0];
         Serial.printf("battery\t%s\t%d\n", address.c_str(), value);
+        controller.printf("battery\t%s\t%d\n", address.c_str(), value);
     }
 }
 
@@ -85,15 +86,15 @@ void setup() {
 //----------------------------------------
 
 void loop() {
-    if (!client.connect(controllerHost, controllerPort)) {
+    if (!controller.connect(controllerHost, controllerPort)) {
         Serial.println("connection failed");
         delay(5000);
         return;
     }
-    client.printf("hello\tbridge\t%s\n", WiFi.localIP().toString().c_str());
-    while (client.connected()) {
-        while (client.available() > 0) {
-            auto data = client.readStringUntil('\n');
+    controller.printf("hello\tbridge\t%s\n", WiFi.localIP().toString().c_str());
+    while (controller.connected()) {
+        while (controller.available() > 0) {
+            auto data = controller.readStringUntil('\n');
             Serial.println(data);
             int i = data.indexOf('\t');
             if (i >= 0) {
@@ -108,8 +109,8 @@ void loop() {
         reportConnected(false);
         delay(10);
     }
-    client.stop();
-    Serial.println("Client disconnected");
+    controller.stop();
+    Serial.println("controller disconnected");
     delay(5000);
 }
 
@@ -169,7 +170,7 @@ void reportConnected(bool force) {
             }
         }
         Serial.println(list);
-        client.println(list);
+        controller.println(list);
         prevReportTime = millis();
     }
 }
