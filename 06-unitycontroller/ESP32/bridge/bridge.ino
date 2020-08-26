@@ -2,6 +2,8 @@
 #include <NimBLEDevice.h>
 #include <WiFi.h>
 
+#include "cube.h"
+
 //----------------------------------------
 
 const char *ssid = "WHEREVER";
@@ -10,14 +12,7 @@ const char *controllerHost = "10.0.0.96";
 const int controllerPort = 12322;
 
 static WiFiClient client;
-
-//----------------------------------------
-
-#define MAX_CUBES 8
-
-static NimBLEUUID serviceUUID("10B20100-5B3B-4571-9508-CF3EFCD7BBAE");
-static NimBLEUUID lampCharUUID("10B20103-5B3B-4571-9508-CF3EFCD7BBAE");
-static NimBLEUUID batteryCharUUID("10B20108-5B3B-4571-9508-CF3EFCD7BBAE");
+static Cube *cubes[MAX_CUBES] = {nullptr};
 
 //----------------------------------------
 
@@ -40,85 +35,14 @@ static MyClientCallback clientCallback;
 
 //----------------------------------------
 
-class Cube {
-   public:
-    Cube()
-        : client(nullptr),
-          service(nullptr),
-          lamp(nullptr),
-          battery(nullptr) {}
-
-    ~Cube() {
-        disconnect();
+void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, size_t length, bool isNotify) {
+    auto client = characteristic->getRemoteService()->getClient();
+    auto address = client->getPeerAddress().toString();
+    if (characteristic->getUUID() == Cube::batteryCharUUID) {
+        uint8_t value = data[0];
+        Serial.printf("battery\t%s\t%d\n", address.c_str(), value);
     }
-
-    bool connect(String address) {
-        Serial.print("Forming a connection to ");
-        Serial.println(address);
-        client = NimBLEDevice::createClient();
-        client->setClientCallbacks(&clientCallback, false);
-        Serial.println(" - Created client");
-        client->connect(NimBLEAddress(address.c_str(), BLE_ADDR_RANDOM));
-        auto service = client->getService(serviceUUID);
-        if (service == nullptr) {
-            Serial.print("Failed to find our service UUID: ");
-            Serial.println(serviceUUID.toString().c_str());
-            disconnect();
-            return false;
-        }
-        Serial.println(" - Found our service");
-
-#define GET_CHARACTERISTIC(x)                                     \
-    x = service->getCharacteristic(x##CharUUID);                  \
-    if (x == nullptr) {                                           \
-        Serial.print("Failed to find our characteristic UUID: "); \
-        Serial.println(x##CharUUID.toString().c_str());           \
-        disconnect();                                             \
-        return false;                                             \
-    }                                                             \
-    Serial.println(" - Found our characteristic " #x);
-
-        GET_CHARACTERISTIC(lamp);
-        GET_CHARACTERISTIC(battery);
-
-        // uint8_t data[] = {0x04, 0x01, 0x04,
-        //                   0x10, 0x01, 0x01, 0xff, 0xff, 0x00,
-        //                   0x10, 0x01, 0x01, 0x00, 0xff, 0x00,
-        //                   0x10, 0x01, 0x01, 0x00, 0xff, 0xff,
-        //                   0x10, 0x01, 0x01, 0xff, 0x00, 0xff};
-        // lamp->writeValue(data, sizeof(data), true);
-        return true;
-    }
-
-    void disconnect() {
-        if (client != nullptr) {
-            client->disconnect();
-            NimBLEDevice::deleteClient(client);
-            client = nullptr;
-            service = nullptr;
-            lamp = nullptr;
-            battery = nullptr;
-        }
-    }
-
-    NimBLEClient *getClient() {
-        return client;
-    }
-
-    String getAddress() {
-        if (client == nullptr) {
-            return String("");
-        }
-        return String(client->getPeerAddress().toString().c_str());
-    }
-
-   private:
-    NimBLEClient *client;
-    NimBLEService *service;
-    NimBLERemoteCharacteristic *lamp, *battery;
-};
-
-static Cube *cubes[MAX_CUBES] = {nullptr};
+}
 
 //----------------------------------------
 
@@ -198,7 +122,7 @@ void connect(String address) {
     }
 
     auto cube = new Cube();
-    if (!cube->connect(address)) {
+    if (!cube->connect(address, &clientCallback, notifyCallback)) {
         delete cube;
         Serial.println("connect failed");
         return;
