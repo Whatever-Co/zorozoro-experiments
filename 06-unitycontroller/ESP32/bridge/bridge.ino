@@ -42,12 +42,12 @@ void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, s
     if (uuid == Cube::batteryCharUUID) {
         uint8_t value = data[0];
         controller.printf("battery\t%s\t%d\n", address.c_str(), value);
-        Serial.printf("battery\t%s\t%d\n", address.c_str(), value);
+        Serial.printf("battery,%s,%d\n", address.c_str(), value);
     } else if (uuid == Cube::buttonCharUUID) {
         uint8_t id = data[0];
         uint8_t state = data[1];
-        controller.printf("button\t%d\t%d\n", id, state);
-        Serial.printf("button\t%d\t%d\n", id, state);
+        controller.printf("button\t%s\t%d\t%d\n", address.c_str(), id, state);
+        Serial.printf("button,%s,%d,%d\n", address.c_str(), id, state);
     }
 }
 
@@ -98,6 +98,7 @@ void loop() {
         return;
     }
     controller.printf("hello\tbridge\t%s\n", WiFi.localIP().toString().c_str());
+    reportConnected(true);
     while (controller.connected()) {
         while (controller.available() > 0) {
             auto data = controller.readStringUntil('\n');
@@ -116,6 +117,18 @@ void loop() {
                     } else {
                         controller.printf("disconnected\t%s\n", arg.c_str());
                         Serial.printf("disconnected\t%s\n", arg.c_str());
+                    }
+                } else if (command == "lamp") {
+                    uint8_t size;
+                    controller.read(&size, 1);
+                    uint8_t data[256] = {0};
+                    size_t read = controller.readBytes(data, size);
+                    Serial.printf("lamp %d, %d\n", size, read);
+                    for (auto cube : cubes) {
+                        if (cube && cube->getAddress() == arg) {
+                            Serial.printf("found cube with address %s\n", cube->getAddress().c_str());
+                            cube->SetLamp(data, size);
+                        }
                     }
                 }
             }

@@ -13,6 +13,13 @@ public class Cube
     }
 
 
+    public void SetLamp()
+    {
+        byte[] data = { 0x03, 0x00, 0x01, 0x01, 0x00, 0xff, 0x00 };
+        Bridge.WriteLampCommand(this, data);
+    }
+
+
     public override string ToString() => $"[Cube Address={Address} IsConnected={IsConnected}]";
 
 }

@@ -45,17 +45,17 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
 
     GET_CHARACTERISTIC(lamp);
     GET_CHARACTERISTIC(battery);
-    // battery->subscribe(true, notifyCallback);
-    GET_CHARACTERISTIC(button);
-    button->subscribe(true, notifyCallback);
+    battery->subscribe(true, notifyCallback);
+    // GET_CHARACTERISTIC(button);
+    // button->subscribe(true, notifyCallback);
 
     // uint8_t data[] = {0x04, 0x01, 0x04,
     //                   0x10, 0x01, 0x01, 0xff, 0xff, 0x00,
     //                   0x10, 0x01, 0x01, 0x00, 0xff, 0x00,
     //                   0x10, 0x01, 0x01, 0x00, 0xff, 0xff,
     //                   0x10, 0x01, 0x01, 0xff, 0x00, 0xff};
-    uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 0x00, 0xff, 0x00};
-    lamp->writeValue(data, sizeof(data), true);
+    // uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 0x00, 0xff, 0x00};
+    // lamp->writeValue(data, sizeof(data), true);
     return true;
 }
 
@@ -75,6 +75,10 @@ void Cube::disconnect() {
         NimBLEDevice::deleteClient(client);
         client = nullptr;
     }
+}
+
+void Cube::SetLamp(uint8_t* data, size_t length) {
+    lamp->writeValue(data, length, true);
 }
 
 NimBLEClient* Cube::getClient() {

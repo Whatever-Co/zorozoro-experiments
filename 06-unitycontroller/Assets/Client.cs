@@ -140,6 +140,7 @@ public class Client
             connectingCube.Bridge = this;
             cubes.Add(connectingCube);
             Debug.Log($"new cube {address} added");
+            connectingCube.SetLamp();
         }
         else
         {
@@ -188,6 +189,27 @@ public class Client
             client.Dispose();
             client = null;
         }
+        stream = null;
+        reader = null;
+        writer = null;
+    }
+
+
+    public void WriteLampCommand(Cube cube, byte[] data)
+    {
+        if (writer == null)
+        {
+            Debug.LogWarning("writer is null");
+            return;
+        }
+        if (data.Length > 255)
+        {
+            Debug.LogWarning("command is too long");
+        }
+        writer.WriteLine($"lamp\t{cube.Address}");
+        stream.WriteByte((byte)data.Length);
+        stream.Write(data, 0, data.Length);
+        stream.Flush();
     }
 
 

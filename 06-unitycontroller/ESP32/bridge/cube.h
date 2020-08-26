@@ -16,6 +16,8 @@ class Cube {
     bool connect(String address, NimBLEClientCallbacks *clientCallbacks, notify_callback notifyCallback);
     void disconnect();
 
+    void SetLamp(uint8_t *data, size_t length);
+
     NimBLEClient *getClient();
     String getAddress();
 
