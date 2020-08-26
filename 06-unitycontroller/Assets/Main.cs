@@ -1,18 +1,16 @@
 ﻿using System;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using System.Collections.Generic;
 using UnityEngine;
 
-// advertised   cc:06:5c:32:a1:34   toio Core Cube
-// advertised   e6:b0:bf:76:91:ce   toio Core Cube
 
 public class Main : MonoBehaviour
 {
 
     TcpListener listener;
-    bool isRunning = true;
+    Client scanner;
+    List<Client> bridges = new List<Client>();
 
 
     void Start()
@@ -26,64 +24,52 @@ public class Main : MonoBehaviour
 
     void AcceptTcpClient(IAsyncResult result)
     {
-        var client = listener.EndAcceptTcpClient(result);
-        Debug.Log($"Accept tcp client: {client.Client.RemoteEndPoint}");
+        var client = new Client(listener.EndAcceptTcpClient(result));
 
         listener.BeginAcceptTcpClient(AcceptTcpClient, null);
 
         try
         {
-            var stream = client.GetStream();
-            var reader = new StreamReader(stream);
-            var writer = new StreamWriter(stream);
-            writer.AutoFlush = true;
-            while (client.Connected && isRunning)
-            {
-                while (!reader.EndOfStream)
-                {
-                    var line = reader.ReadLine();
-                    Debug.Log(line);
-                    var tokens = line.Split('\t');
-                    var command = tokens[0];
-                    switch (command)
-                    {
-                        case "hello":
-                            switch (tokens[1])
-                            {
-                                case "bridge":
-                                    writer.WriteLine("hello\tcontroller");
-                                    writer.WriteLine("connect\te6:b0:bf:76:91:ce");
-                                    break;
-                            }
-                            break;
-                        case "advertised":
-                            if (tokens[2] == "toio Core Cube")
-                            {
-                                Debug.Log("Found toio Cube!!!");
-                            }
-                            break;
-                    }
-                }
-                if (client.Client.Poll(1000, SelectMode.SelectRead) && (client.Client.Available == 0))
-                {
-                    break;
-                }
-            }
+            client.OnHello += OnHello;
+            client.Start();
         }
         catch (Exception e)
         {
             Debug.LogException(e);
         }
-        Debug.Log("Disconnect: " + client.Client.RemoteEndPoint);
-        client.Close();
+    }
+
+
+    private void OnHello(Client client, Client.Mode mode)
+    {
+        Debug.Log($"OnHello: {client.Address} is {mode}");
+        switch (mode)
+        {
+            case Client.Mode.Scanner:
+                scanner = client;
+                client.OnNewCube += OnNewCube;
+                break;
+            case Client.Mode.Bridge:
+                bridges.Add(client);
+                break;
+        }
+    }
+
+
+    private void OnNewCube(Client client, string address)
+    {
+        Debug.Log($"OnNewCube: {address}");
     }
 
 
     void OnApplicationQuit()
     {
         listener.Stop();
-        isRunning = false;
+        scanner?.Stop();
+        foreach (var bridge in bridges)
+        {
+            bridge.Stop();
+        }
     }
-
 
 }

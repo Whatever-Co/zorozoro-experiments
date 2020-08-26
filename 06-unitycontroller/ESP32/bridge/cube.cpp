@@ -4,12 +4,14 @@
 NimBLEUUID Cube::serviceUUID("10B20100-5B3B-4571-9508-CF3EFCD7BBAE");
 NimBLEUUID Cube::lampCharUUID("10B20103-5B3B-4571-9508-CF3EFCD7BBAE");
 NimBLEUUID Cube::batteryCharUUID("10B20108-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::buttonCharUUID("10B20107-5B3B-4571-9508-CF3EFCD7BBAE");
 
 Cube::Cube()
     : client(nullptr),
       service(nullptr),
       lamp(nullptr),
-      battery(nullptr) {}
+      battery(nullptr),
+      button(nullptr) {}
 
 Cube::~Cube() {
     disconnect();
@@ -43,7 +45,9 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
 
     GET_CHARACTERISTIC(lamp);
     GET_CHARACTERISTIC(battery);
-    battery->subscribe(true, notifyCallback);
+    // battery->subscribe(true, notifyCallback);
+    GET_CHARACTERISTIC(button);
+    button->subscribe(true, notifyCallback);
 
     // uint8_t data[] = {0x04, 0x01, 0x04,
     //                   0x10, 0x01, 0x01, 0xff, 0xff, 0x00,
@@ -62,6 +66,7 @@ void Cube::disconnect() {
         service = nullptr;
         lamp = nullptr;
         battery = nullptr;
+        button = nullptr;
     }
 }
 

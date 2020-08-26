@@ -8,6 +8,7 @@ class Cube {
     static NimBLEUUID serviceUUID;
     static NimBLEUUID lampCharUUID;
     static NimBLEUUID batteryCharUUID;
+    static NimBLEUUID buttonCharUUID;
 
     Cube();
     ~Cube();
@@ -21,5 +22,5 @@ class Cube {
    private:
     NimBLEClient *client;
     NimBLEService *service;
-    NimBLERemoteCharacteristic *lamp, *battery;
+    NimBLERemoteCharacteristic *lamp, *battery, *button;
 };

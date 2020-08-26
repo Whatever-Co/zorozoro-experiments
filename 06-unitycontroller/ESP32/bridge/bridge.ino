@@ -38,10 +38,16 @@ static MyClientCallback clientCallback;
 void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, size_t length, bool isNotify) {
     auto client = characteristic->getRemoteService()->getClient();
     auto address = client->getPeerAddress().toString();
-    if (characteristic->getUUID() == Cube::batteryCharUUID) {
+    auto uuid = characteristic->getUUID();
+    if (uuid == Cube::batteryCharUUID) {
         uint8_t value = data[0];
-        Serial.printf("battery\t%s\t%d\n", address.c_str(), value);
         controller.printf("battery\t%s\t%d\n", address.c_str(), value);
+        Serial.printf("battery\t%s\t%d\n", address.c_str(), value);
+    } else if (uuid == Cube::buttonCharUUID) {
+        uint8_t id = data[0];
+        uint8_t state = data[1];
+        controller.printf("button\t%d\t%d\n", id, state);
+        Serial.printf("button\t%d\t%d\n", id, state);
     }
 }
 
@@ -169,8 +175,8 @@ void reportConnected(bool force) {
                 list += cubes[i]->getAddress();
             }
         }
-        Serial.println(list);
         controller.println(list);
+        Serial.println(list);
         prevReportTime = millis();
     }
 }
