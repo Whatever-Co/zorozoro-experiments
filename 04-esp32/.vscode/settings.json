@@ -1,0 +1,16 @@
+{
+    "editor.formatOnType": true,
+    "editor.formatOnSave": true,
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0}",
+    "files.associations": {
+        "*.sc": "glsl",
+        "*.vsc": "glsl",
+        "*.fsc": "glsl",
+        "*.make": "makefile",
+        "*.bazel": "starlark",
+        "string": "cpp",
+        "*.tcc": "cpp",
+        "ostream": "cpp"
+    },
+    "python.pythonPath": "/Users/hiko/.anyenv/envs/pyenv/versions/3.8.1/bin/python"
+}
