@@ -1,0 +1,6 @@
+{
+    "sketch": "app.ino",
+    "board": "adafruit:nrf52:sparkfunnrf52840mini",
+    "configuration": "softdevice=s140v6,debug=l1",
+    "port": "/dev/tty.usbmodem1301"
+}

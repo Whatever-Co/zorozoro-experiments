@@ -1,0 +1,6 @@
+{
+    "editor.formatOnType": true,
+    "editor.formatOnSave": true,
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0}",
+    "python.pythonPath": "/Users/hiko/.anyenv/envs/pyenv/versions/3.8.1/bin/python"
+}
