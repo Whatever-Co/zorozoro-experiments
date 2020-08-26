@@ -3,24 +3,30 @@
 #include <NimBLEDevice.h>
 #include <WiFi.h>
 
+//----------------------------------------
+
 const char *ssid = "WHEREVER";
 const char *password = "0364276022";
+const char *controllerHost = "10.0.0.96";
+const int controllerPort = 12322;
 
-static WiFiClient client;
+static WiFiClient controller;
+
+//----------------------------------------
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice *advertisedDevice) {
-        Serial.println(advertisedDevice->toString().c_str());
-        client.printf("advertised\t%s\t%d\t%s\n", advertisedDevice->getAddress().toString().c_str(), advertisedDevice->getAddress().getType(), advertisedDevice->getName().c_str());
+        if (advertisedDevice->getName() == "toio Core Cube") {
+            Serial.println(advertisedDevice->toString().c_str());
+            controller.printf("advertised\t%s\t%d\t%s\n",
+                              advertisedDevice->getAddress().toString().c_str(),
+                              advertisedDevice->getAddress().getType(),
+                              advertisedDevice->getName().c_str());
+        }
     }
 };
 
-void scan(void *param) {
-    auto scan = NimBLEDevice::getScan();
-    scan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    scan->setActiveScan(true);
-    scan->start(0, false);
-}
+//----------------------------------------
 
 void setup() {
     Serial.begin(115200);
@@ -55,24 +61,29 @@ void setup() {
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-    if (!client.connect("10.0.0.96", 12322)) {
-        Serial.println("connection failed");
-    }
-    client.printf("hello\tscanner\t%s\n", WiFi.localIP().toString().c_str());
-
     NimBLEDevice::init("");
 
-    xTaskCreateUniversal(scan, "scan", 8192, nullptr, 1, nullptr, 0);
+    auto scan = NimBLEDevice::getScan();
+    scan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+    scan->setActiveScan(true);
 }
 
-static int prevPing = 0;
-
 void loop() {
-    int now = millis() / 5000;
-    if (now > prevPing) {
-        prevPing = now;
-        Serial.printf("ping\t%d\n", now);
-        client.printf("ping\t%d\n", now);
+    if (!controller.connect(controllerHost, controllerPort)) {
+        Serial.println("connection failed");
+        delay(5000);
+        return;
     }
-    delay(1000);
+    controller.printf("hello\tscanner\t%s\n", WiFi.localIP().toString().c_str());
+    auto scan = NimBLEDevice::getScan();
+    while (controller.connected()) {
+        scan->start(3, false);
+
+        int now = millis() / 1000;
+        Serial.printf("ping\t%d\n", now);
+        controller.printf("ping\t%d\n", now);
+    }
+    controller.stop();
+    Serial.println("controller disconnected");
+    delay(5000);
 }
