@@ -108,11 +108,19 @@ void loop() {
                 auto arg = data.substring(i + 1);
                 Serial.printf("command = \"%s\", arg = \"%s\"\n", command.c_str(), arg.c_str());
                 if (command == "connect") {
-                    connect(arg);
+                    auto cube = connect(arg);
+                    if (cube) {
+                        controller.printf("connected\t%s\n", arg.c_str());
+                        Serial.printf("connected\t%s\n", arg.c_str());
+                        reportConnected(true);
+                    } else {
+                        controller.printf("disconnected\t%s\n", arg.c_str());
+                        Serial.printf("disconnected\t%s\n", arg.c_str());
+                    }
                 }
             }
         }
-        reportConnected(false);
+        // reportConnected(false);
         delay(10);
     }
     controller.stop();
@@ -122,34 +130,36 @@ void loop() {
 
 //----------------------------------------
 
-void connect(String address) {
+Cube *connect(String address) {
     if (NimBLEDevice::getClientListSize() >= MAX_CUBES) {
         Serial.println("cannot connect no more cubes..");
-        return;
+        return nullptr;
     }
 
     auto cube = new Cube();
     if (!cube->connect(address, &clientCallback, notifyCallback)) {
         delete cube;
         Serial.println("connect failed");
-        return;
+        return nullptr;
     }
-    Serial.println("connected");
     for (int i = 0; i < MAX_CUBES; i++) {
         if (cubes[i] == nullptr) {
             cubes[i] = cube;
             break;
         }
     }
-    reportConnected(true);
+    return cube;
 }
 
 //----------------------------------------
 
 void disconnect(NimBLEClient *client) {
     for (int i = 0; i < MAX_CUBES; i++) {
-        if (cubes[i] != nullptr && cubes[i]->getClient() == client) {
-            delete cubes[i];
+        auto cube = cubes[i];
+        if (cube != nullptr && cube->getClient() == client) {
+            controller.printf("disconnected\t%s\n", cube->getAddress().c_str());
+            Serial.printf("disconnected\t%s\n", cube->getAddress().c_str());
+            delete cube;
             cubes[i] = nullptr;
             break;
         }

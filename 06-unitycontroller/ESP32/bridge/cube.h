@@ -21,6 +21,6 @@ class Cube {
 
    private:
     NimBLEClient *client;
-    NimBLEService *service;
+    NimBLERemoteService *service;
     NimBLERemoteCharacteristic *lamp, *battery, *button;
 };

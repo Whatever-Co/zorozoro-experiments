@@ -24,7 +24,7 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
     client->setClientCallbacks(clientCallbacks, false);
     Serial.println(" - Created client");
     client->connect(NimBLEAddress(address.c_str(), BLE_ADDR_RANDOM));
-    auto service = client->getService(serviceUUID);
+    service = client->getService(serviceUUID);
     if (service == nullptr) {
         Serial.print("Failed to find our service UUID: ");
         Serial.println(serviceUUID.toString().c_str());
@@ -54,19 +54,26 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
     //                   0x10, 0x01, 0x01, 0x00, 0xff, 0x00,
     //                   0x10, 0x01, 0x01, 0x00, 0xff, 0xff,
     //                   0x10, 0x01, 0x01, 0xff, 0x00, 0xff};
-    // lamp->writeValue(data, sizeof(data), true);
+    uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 0x00, 0xff, 0x00};
+    lamp->writeValue(data, sizeof(data), true);
     return true;
 }
 
 void Cube::disconnect() {
+    lamp = nullptr;
+    if (battery) {
+        battery->unsubscribe();
+    }
+    battery = nullptr;
+    if (button) {
+        button->unsubscribe();
+    }
+    button = nullptr;
+    service = nullptr;
     if (client != nullptr) {
         client->disconnect();
         NimBLEDevice::deleteClient(client);
         client = nullptr;
-        service = nullptr;
-        lamp = nullptr;
-        battery = nullptr;
-        button = nullptr;
     }
 }
 
