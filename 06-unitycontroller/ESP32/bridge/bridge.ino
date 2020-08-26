@@ -21,17 +21,42 @@ static NimBLEUUID batteryCharUUID("10B20108-5B3B-4571-9508-CF3EFCD7BBAE");
 
 //----------------------------------------
 
+void disconnect(NimBLEClient *client);
+
+//----------------------------------------
+
+class MyClientCallback : public NimBLEClientCallbacks {
+   public:
+    void onConnect(NimBLEClient *client) {
+        Serial.printf("MyClientCallback: onConnect: %s\n", client->getPeerAddress().toString().c_str());
+    }
+    void onDisconnect(NimBLEClient *client) {
+        Serial.printf("MyClientCallback: onDisconnect: %s\n", client->getPeerAddress().toString().c_str());
+        disconnect(client);
+    }
+};
+
+static MyClientCallback clientCallback;
+
+//----------------------------------------
+
 class Cube {
    public:
     Cube()
         : client(nullptr),
           service(nullptr),
-          lamp(nullptr) {}
+          lamp(nullptr),
+          battery(nullptr) {}
+
+    ~Cube() {
+        disconnect();
+    }
 
     bool connect(String address) {
         Serial.print("Forming a connection to ");
         Serial.println(address);
         client = NimBLEDevice::createClient();
+        client->setClientCallbacks(&clientCallback, false);
         Serial.println(" - Created client");
         client->connect(NimBLEAddress(address.c_str(), BLE_ADDR_RANDOM));
         auto service = client->getService(serviceUUID);
@@ -43,14 +68,18 @@ class Cube {
         }
         Serial.println(" - Found our service");
 
-        auto lamp = service->getCharacteristic(lampCharUUID);
-        if (lamp == nullptr) {
-            Serial.print("Failed to find our characteristic UUID: ");
-            Serial.println(lampCharUUID.toString().c_str());
-            disconnect();
-            return false;
-        }
-        Serial.println(" - Found our characteristic");
+#define GET_CHARACTERISTIC(x)                                     \
+    x = service->getCharacteristic(x##CharUUID);                  \
+    if (x == nullptr) {                                           \
+        Serial.print("Failed to find our characteristic UUID: "); \
+        Serial.println(x##CharUUID.toString().c_str());           \
+        disconnect();                                             \
+        return false;                                             \
+    }                                                             \
+    Serial.println(" - Found our characteristic " #x);
+
+        GET_CHARACTERISTIC(lamp);
+        GET_CHARACTERISTIC(battery);
 
         // uint8_t data[] = {0x04, 0x01, 0x04,
         //                   0x10, 0x01, 0x01, 0xff, 0xff, 0x00,
@@ -68,7 +97,12 @@ class Cube {
             client = nullptr;
             service = nullptr;
             lamp = nullptr;
+            battery = nullptr;
         }
+    }
+
+    NimBLEClient *getClient() {
+        return client;
     }
 
     String getAddress() {
@@ -81,7 +115,7 @@ class Cube {
    private:
     NimBLEClient *client;
     NimBLEService *service;
-    NimBLERemoteCharacteristic *lamp;
+    NimBLERemoteCharacteristic *lamp, *battery;
 };
 
 static Cube *cubes[MAX_CUBES] = {nullptr};
@@ -181,13 +215,23 @@ void connect(String address) {
 
 //----------------------------------------
 
+void disconnect(NimBLEClient *client) {
+    for (int i = 0; i < MAX_CUBES; i++) {
+        if (cubes[i] != nullptr && cubes[i]->getClient() == client) {
+            delete cubes[i];
+            cubes[i] = nullptr;
+            break;
+        }
+    }
+    reportConnected(true);
+}
+
+//----------------------------------------
+
 static int prevReportTime = 0;
 static int reportInterval = 5000;
 
 void reportConnected(bool force) {
-    if (NimBLEDevice::getClientListSize() == 0) {
-        return;
-    }
     int dt = millis() - prevReportTime;
     if (force || dt > reportInterval) {
         String list = "cubes\t";
