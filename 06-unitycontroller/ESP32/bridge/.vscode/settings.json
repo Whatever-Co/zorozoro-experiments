@@ -68,6 +68,15 @@
         "string_view": "cpp",
         "ranges": "cpp",
         "*.tcc": "cpp",
-        "cerrno": "cpp"
+        "cerrno": "cpp",
+        "chrono": "cpp",
+        "functional": "cpp",
+        "ratio": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp",
+        "compare": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp"
     }
 }

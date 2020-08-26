@@ -11,7 +11,7 @@ static WiFiClient client;
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice *advertisedDevice) {
         Serial.println(advertisedDevice->toString().c_str());
-        client.printf("advertised\t%s\t%s\n", advertisedDevice->getAddress().toString().c_str(), advertisedDevice->getName().c_str());
+        client.printf("advertised\t%s\t%d\t%s\n", advertisedDevice->getAddress().toString().c_str(), advertisedDevice->getAddress().getType(), advertisedDevice->getName().c_str());
     }
 };
 

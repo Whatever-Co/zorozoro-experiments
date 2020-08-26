@@ -52,7 +52,7 @@ public class Main : MonoBehaviour
                             {
                                 case "bridge":
                                     writer.WriteLine("hello\tcontroller");
-                                    writer.WriteLine("connect\tcc:06:5c:32:a1:34");
+                                    writer.WriteLine("connect\te6:b0:bf:76:91:ce");
                                     break;
                             }
                             break;

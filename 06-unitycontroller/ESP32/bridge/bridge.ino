@@ -2,12 +2,91 @@
 #include <NimBLEDevice.h>
 #include <WiFi.h>
 
+//----------------------------------------
+
 const char *ssid = "WHEREVER";
 const char *password = "0364276022";
 const char *controllerHost = "10.0.0.96";
 const int controllerPort = 12322;
 
 static WiFiClient client;
+
+//----------------------------------------
+
+#define MAX_CUBES 8
+
+static NimBLEUUID serviceUUID("10B20100-5B3B-4571-9508-CF3EFCD7BBAE");
+static NimBLEUUID lampCharUUID("10B20103-5B3B-4571-9508-CF3EFCD7BBAE");
+static NimBLEUUID batteryCharUUID("10B20108-5B3B-4571-9508-CF3EFCD7BBAE");
+
+//----------------------------------------
+
+class Cube {
+   public:
+    Cube()
+        : client(nullptr),
+          service(nullptr),
+          lamp(nullptr) {}
+
+    bool connect(String address) {
+        Serial.print("Forming a connection to ");
+        Serial.println(address);
+        client = NimBLEDevice::createClient();
+        Serial.println(" - Created client");
+        client->connect(NimBLEAddress(address.c_str(), BLE_ADDR_RANDOM));
+        auto service = client->getService(serviceUUID);
+        if (service == nullptr) {
+            Serial.print("Failed to find our service UUID: ");
+            Serial.println(serviceUUID.toString().c_str());
+            disconnect();
+            return false;
+        }
+        Serial.println(" - Found our service");
+
+        auto lamp = service->getCharacteristic(lampCharUUID);
+        if (lamp == nullptr) {
+            Serial.print("Failed to find our characteristic UUID: ");
+            Serial.println(lampCharUUID.toString().c_str());
+            disconnect();
+            return false;
+        }
+        Serial.println(" - Found our characteristic");
+
+        // uint8_t data[] = {0x04, 0x01, 0x04,
+        //                   0x10, 0x01, 0x01, 0xff, 0xff, 0x00,
+        //                   0x10, 0x01, 0x01, 0x00, 0xff, 0x00,
+        //                   0x10, 0x01, 0x01, 0x00, 0xff, 0xff,
+        //                   0x10, 0x01, 0x01, 0xff, 0x00, 0xff};
+        // lamp->writeValue(data, sizeof(data), true);
+        return true;
+    }
+
+    void disconnect() {
+        if (client != nullptr) {
+            client->disconnect();
+            NimBLEDevice::deleteClient(client);
+            client = nullptr;
+            service = nullptr;
+            lamp = nullptr;
+        }
+    }
+
+    String getAddress() {
+        if (client == nullptr) {
+            return String("");
+        }
+        return String(client->getPeerAddress().toString().c_str());
+    }
+
+   private:
+    NimBLEClient *client;
+    NimBLEService *service;
+    NimBLERemoteCharacteristic *lamp;
+};
+
+static Cube *cubes[MAX_CUBES] = {nullptr};
+
+//----------------------------------------
 
 void setup() {
     Serial.begin(115200);
@@ -41,7 +120,11 @@ void setup() {
     Serial.println("WiFi connected");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+
+    NimBLEDevice::init("");
 }
+
+//----------------------------------------
 
 void loop() {
     if (!client.connect(controllerHost, controllerPort)) {
@@ -59,11 +142,66 @@ void loop() {
                 auto command = data.substring(0, i);
                 auto arg = data.substring(i + 1);
                 Serial.printf("command = \"%s\", arg = \"%s\"\n", command.c_str(), arg.c_str());
+                if (command == "connect") {
+                    connect(arg);
+                }
             }
         }
+        reportConnected(false);
         delay(10);
     }
     client.stop();
     Serial.println("Client disconnected");
     delay(5000);
+}
+
+//----------------------------------------
+
+void connect(String address) {
+    if (NimBLEDevice::getClientListSize() >= MAX_CUBES) {
+        Serial.println("cannot connect no more cubes..");
+        return;
+    }
+
+    auto cube = new Cube();
+    if (!cube->connect(address)) {
+        delete cube;
+        Serial.println("connect failed");
+        return;
+    }
+    Serial.println("connected");
+    for (int i = 0; i < MAX_CUBES; i++) {
+        if (cubes[i] == nullptr) {
+            cubes[i] = cube;
+            break;
+        }
+    }
+    reportConnected(true);
+}
+
+//----------------------------------------
+
+static int prevReportTime = 0;
+static int reportInterval = 5000;
+
+void reportConnected(bool force) {
+    if (NimBLEDevice::getClientListSize() == 0) {
+        return;
+    }
+    int dt = millis() - prevReportTime;
+    if (force || dt > reportInterval) {
+        String list = "cubes\t";
+        int count = 0;
+        for (int i = 0; i < MAX_CUBES; i++) {
+            if (cubes[i] != nullptr) {
+                if (count++ > 0) {
+                    list += ",";
+                }
+                list += cubes[i]->getAddress();
+            }
+        }
+        Serial.println(list);
+        client.println(list);
+        prevReportTime = millis();
+    }
 }
