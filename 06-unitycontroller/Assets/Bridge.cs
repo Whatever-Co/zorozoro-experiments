@@ -11,12 +11,15 @@ using UnityEngine;
 public class Bridge : System.IDisposable
 {
 
+    public static readonly int MAX_CUBES_PER_BRIDGE = 8;
+
+
     public string Id { get; }
     public int NumConnectedCubes { get => cubes?.Count ?? 0; }
     public bool IsBusy { get; private set; } = false;
 
     private Cube connectingCube;
-    private List<Cube> cubes = new List<Cube>();
+    private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
     private IApplicationMessagePublisher publisher;
 
 
@@ -66,9 +69,9 @@ public class Bridge : System.IDisposable
         if (connectingCube.Address == address)
         {
             connectingCube.Bridge = this;
-            cubes.Add(connectingCube);
+            cubes.Add(address, connectingCube);
             Debug.Log($"new cube {address} added");
-            connectingCube.SetLamp();
+            connectingCube.SetLamp(Color.white);
         }
         else
         {
@@ -88,11 +91,10 @@ public class Bridge : System.IDisposable
         }
         else
         {
-            var remove = cubes.Where(c => c.Address == address && c.Bridge == this).ToList();
-            foreach (var c in remove)
+            if (cubes.ContainsKey(address))
             {
-                cubes.Remove(c);
-                Debug.Log("cube removed " + c.Address);
+                cubes.Remove(address);
+                Debug.Log("cube removed " + address);
             }
         }
     }
@@ -100,10 +102,20 @@ public class Bridge : System.IDisposable
 
     private void HandleBattery(string payload)
     {
-        // if (int.TryParse(battery, out var value))
-        // {
-        //     Debug.Log($"");
-        // }
+        var t = payload.Split(',');
+        Debug.LogWarning($"{t[0]}, {t[1]}");
+        if (int.TryParse(t[1], out var value))
+        {
+            var address = t[0];
+            if (cubes.TryGetValue(address, out var cube))
+            {
+                cube.SetBattery(value);
+            }
+            else
+            {
+                Debug.LogWarning($"unknown cube {address}");
+            }
+        }
     }
 
 
@@ -118,12 +130,10 @@ public class Bridge : System.IDisposable
                 writer.Write((byte)data.Length);
                 writer.Write(data);
 
-                var buffer = stream.ToArray();
-                Debug.LogWarning($"{cube.Address}, {cube.Address.Length}, {data.Length}, {buffer.Length}");
                 publisher.PublishAsync(new MqttApplicationMessage
                 {
                     Topic = $"{Id}/lamp",
-                    Payload = buffer,
+                    Payload = stream.ToArray(),
                 }, CancellationToken.None);
             }
         }

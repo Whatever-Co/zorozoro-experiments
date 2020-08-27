@@ -109,7 +109,7 @@ public class Main : MonoBehaviour
     void NewCubeHandler(string cubeId)
     {
         var kv = bridges
-        .Where(i => !i.Value.IsBusy && i.Value.NumConnectedCubes < Client.MAX_CUBES_PER_CLIENT)
+        .Where(i => !i.Value.IsBusy && i.Value.NumConnectedCubes < Bridge.MAX_CUBES_PER_BRIDGE)
         .OrderBy(i => i.Value.NumConnectedCubes)
         .FirstOrDefault();
         if (kv.Value != null)
