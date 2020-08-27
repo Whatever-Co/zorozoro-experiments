@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <NimBLEAdvertisedDevice.h>
 #include <NimBLEDevice.h>
+#include <PubSubClient.h>
 #include <WiFi.h>
 
 //----------------------------------------
@@ -8,9 +9,10 @@
 const char *ssid = "WHEREVER";
 const char *password = "0364276022";
 const char *controllerHost = "10.0.0.96";
-const int controllerPort = 12322;
+const int controllerPort = 1883;
 
-static WiFiClient controller;
+WiFiClient wifi;
+PubSubClient client(wifi);
 
 //----------------------------------------
 
@@ -18,23 +20,28 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice *advertisedDevice) {
         if (advertisedDevice->getName() == "toio Core Cube") {
             Serial.println(advertisedDevice->toString().c_str());
-            controller.printf("advertised\t%s\t%d\t%s\n",
-                              advertisedDevice->getAddress().toString().c_str(),
-                              advertisedDevice->getAddress().getType(),
-                              advertisedDevice->getName().c_str());
+            client.publish("newcube", advertisedDevice->getAddress().toString().c_str());
         }
     }
 };
+
+void scan(void *param) {
+    auto scan = NimBLEDevice::getScan();
+    scan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+    scan->setActiveScan(true);
+    while (true) {
+        scan->start(3, false);
+        delay(100);
+    }
+}
 
 //----------------------------------------
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
+    delay(10);
 
-    Serial.println();
-    Serial.println();
-    Serial.print("Connecting to ");
+    Serial.print("\n\nConnecting to ");
     Serial.println(ssid);
 
     WiFi.disconnect(true, true);
@@ -56,34 +63,42 @@ void setup() {
         Serial.print(".");
     }
 
-    Serial.println("");
-    Serial.println("WiFi connected");
+    Serial.println("\nWiFi connected");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
+    client.setServer(controllerHost, controllerPort);
+
     NimBLEDevice::init("");
 
-    auto scan = NimBLEDevice::getScan();
-    scan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    scan->setActiveScan(true);
+    xTaskCreateUniversal(scan, "scan", 8192, nullptr, 1, nullptr, 0);
 }
 
-void loop() {
-    if (!controller.connect(controllerHost, controllerPort)) {
-        Serial.println("connection failed");
-        delay(5000);
-        return;
-    }
-    controller.printf("hello\tscanner\t%s\n", WiFi.localIP().toString().c_str());
-    auto scan = NimBLEDevice::getScan();
-    while (controller.connected()) {
-        scan->start(3, false);
+//----------------------------------------
 
-        int now = millis() / 1000;
-        Serial.printf("ping\t%d\n", now);
-        controller.printf("ping\t%d\n", now);
+void loop() {
+    if (!client.connected()) {
+        Serial.println("connection failed");
+        reconnect();
     }
-    controller.stop();
-    Serial.println("controller disconnected");
-    delay(5000);
+    client.loop();
+    delay(100);
+}
+
+//----------------------------------------
+
+void reconnect() {
+    while (!client.connected()) {
+        Serial.print("Attempting MQTT connection...");
+        if (client.connect(WiFi.localIP().toString().c_str())) {
+            Serial.println("connected");
+            client.publish("hello", "scanner");
+        } else {
+            Serial.print("failed, rc=");
+            Serial.print(client.state());
+            Serial.println(" try again in 5 seconds");
+            // Wait 5 seconds before retrying
+            delay(5000);
+        }
+    }
 }

@@ -140,7 +140,7 @@ public class Client
         IsBusy = false;
         if (connectingCube.Address == address)
         {
-            connectingCube.Bridge = this;
+            // connectingCube.Bridge = this;
             cubes.Add(connectingCube);
             Debug.Log($"new cube {address} added");
             connectingCube.SetLamp();
@@ -163,12 +163,12 @@ public class Client
         }
         else
         {
-            var remove = cubes.Where(c => c.Address == address && c.Bridge == this).ToList();
-            foreach (var c in remove)
-            {
-                cubes.Remove(c);
-                Debug.Log("cube removed " + c.Address);
-            }
+            // var remove = cubes.Where(c => c.Address == address && c.Bridge == this).ToList();
+            // foreach (var c in remove)
+            // {
+            //     cubes.Remove(c);
+            //     Debug.Log("cube removed " + c.Address);
+            // }
         }
     }
 

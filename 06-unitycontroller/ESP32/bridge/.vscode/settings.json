@@ -74,7 +74,8 @@
         "utility": "cpp",
         "compare": "cpp",
         "istream": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "new": "cpp"
     },
     "editor.formatOnType": true,
     "editor.formatOnSave": true,
