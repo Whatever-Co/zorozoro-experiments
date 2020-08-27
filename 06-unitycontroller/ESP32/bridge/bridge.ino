@@ -91,6 +91,8 @@ void setup() {
 
 //----------------------------------------
 
+static uint8_t lampdata[256] = {0};
+
 void loop() {
     if (!controller.connect(controllerHost, controllerPort)) {
         Serial.println("connection failed");
@@ -121,19 +123,18 @@ void loop() {
                 } else if (command == "lamp") {
                     uint8_t size;
                     controller.read(&size, 1);
-                    uint8_t data[256] = {0};
-                    size_t read = controller.readBytes(data, size);
+                    size_t read = controller.readBytes(lampdata, size);
                     Serial.printf("lamp %d, %d\n", size, read);
                     for (auto cube : cubes) {
                         if (cube && cube->getAddress() == arg) {
                             Serial.printf("found cube with address %s\n", cube->getAddress().c_str());
-                            cube->SetLamp(data, size);
+                            cube->SetLamp(lampdata, size);
                         }
                     }
                 }
             }
         }
-        // reportConnected(false);
+        reportConnected(false);
         delay(10);
     }
     controller.stop();

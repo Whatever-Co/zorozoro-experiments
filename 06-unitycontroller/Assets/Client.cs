@@ -63,7 +63,7 @@ public class Client
                     while (!reader.EndOfStream)
                     {
                         var line = reader.ReadLine();
-                        // Debug.Log(line);
+                        Debug.Log(line);
                         var tokens = line.Split('\t');
                         var command = tokens[0];
                         switch (command)
@@ -79,6 +79,9 @@ public class Client
                                 break;
                             case "disconnected":
                                 HandleDisconnected(tokens[1]);
+                                break;
+                            case "battery":
+                                HandleBattery(tokens[1], tokens[2]);
                                 break;
                         }
                     }
@@ -170,6 +173,15 @@ public class Client
     }
 
 
+    private void HandleBattery(string address, string battery)
+    {
+        if (int.TryParse(battery, out var value))
+        {
+            Debug.Log($"");
+        }
+    }
+
+
     public void Connect(Cube cube)
     {
         Debug.Log($"connecting {cube.Address} through {Address}");
@@ -210,6 +222,7 @@ public class Client
         stream.WriteByte((byte)data.Length);
         stream.Write(data, 0, data.Length);
         stream.Flush();
+        writer.WriteLine("ping");
     }
 
 
