@@ -6,9 +6,12 @@
 class Cube {
    public:
     static NimBLEUUID serviceUUID;
-    static NimBLEUUID lampCharUUID;
-    static NimBLEUUID batteryCharUUID;
-    static NimBLEUUID buttonCharUUID;
+    static NimBLEUUID idInfoCharUUID;
+    static NimBLEUUID motorControlCharUUID;
+    static NimBLEUUID lampControlCharUUID;
+    static NimBLEUUID sensorInfoCharUUID;
+    static NimBLEUUID buttonInfoCharUUID;
+    static NimBLEUUID batteryInfoCharUUID;
 
     Cube();
     ~Cube();
@@ -24,5 +27,10 @@ class Cube {
    private:
     NimBLEClient *client;
     NimBLERemoteService *service;
-    NimBLERemoteCharacteristic *lamp, *battery, *button;
+    NimBLERemoteCharacteristic *idInfo;
+    NimBLERemoteCharacteristic *motorControl;
+    NimBLERemoteCharacteristic *lampControl;
+    NimBLERemoteCharacteristic *sersorInfo;
+    NimBLERemoteCharacteristic *buttonInfo;
+    NimBLERemoteCharacteristic *batteryInfo;
 };

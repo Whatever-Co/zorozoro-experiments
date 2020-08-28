@@ -12,8 +12,8 @@ const char *password = "0364276022";
 const char *controllerHost = "10.0.0.96";
 const int controllerPort = 1883;
 
-WiFiClient wifi;
-PubSubClient mq(wifi);
+static WiFiClient wifi;
+static PubSubClient mq(wifi);
 
 static Cube *cubes[MAX_CUBES] = {nullptr};
 
@@ -42,18 +42,17 @@ void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, s
     auto address = characteristic->getRemoteService()->getClient()->getPeerAddress().toString();
     auto uuid = characteristic->getUUID();
     char payload[32];
-    if (uuid == Cube::batteryCharUUID) {
+    if (uuid == Cube::buttonInfoCharUUID) {
+        uint8_t id = data[0];
+        uint8_t state = data[1];
+        sprintf(payload, "%s,%d,%d", address.c_str(), id, state);
+        mq.publish("button", payload);
+        Serial.printf("button,%s\n", payload);
+    } else if (uuid == Cube::batteryInfoCharUUID) {
         uint8_t value = data[0];
         sprintf(payload, "%s,%d", address.c_str(), value);
         mq.publish("battery", payload);
         Serial.printf("battery,%s\n", payload);
-    } else if (uuid == Cube::buttonCharUUID) {
-        uint8_t id = data[0];
-        uint8_t state = data[1];
-        sprintf(payload, "%
-        s,%d,%d", address.c_str(), id, state);
-        mq.publish("button", payload);
-        Serial.printf("button,%s\n", payload);
     }
 }
 
@@ -97,8 +96,6 @@ void setup() {
 
 //----------------------------------------
 
-static uint8_t lampdata[256] = {0};
-
 void loop() {
     if (!mq.connected()) {
         Serial.println("connection failed");
@@ -107,57 +104,6 @@ void loop() {
     mq.loop();
     delay(100);
 }
-
-/*
-void loop() {
-    if (!controller.connect(controllerHost, controllerPort)) {
-        Serial.println("connection failed");
-        delay(5000);
-        return;
-    }
-    controller.printf("hello\tbridge\t%s\n", WiFi.localIP().toString().c_str());
-    reportConnected(true);
-    while (controller.connected()) {
-        while (controller.available() > 0) {
-            auto data = controller.readStringUntil('\n');
-            Serial.println(data);
-            int i = data.indexOf('\t');
-            if (i >= 0) {
-                auto command = data.substring(0, i);
-                auto arg = data.substring(i + 1);
-                Serial.printf("command = \"%s\", arg = \"%s\"\n", command.c_str(), arg.c_str());
-                if (command == "connect") {
-                    auto cube = connect(arg);
-                    if (cube) {
-                        controller.printf("connected\t%s\n", arg.c_str());
-                        Serial.printf("connected\t%s\n", arg.c_str());
-                        reportConnected(true);
-                    } else {
-                        controller.printf("disconnected\t%s\n", arg.c_str());
-                        Serial.printf("disconnected\t%s\n", arg.c_str());
-                    }
-                } else if (command == "lamp") {
-                    uint8_t size;
-                    controller.read(&size, 1);
-                    size_t read = controller.readBytes(lampdata, size);
-                    Serial.printf("lamp %d, %d\n", size, read);
-                    for (auto cube : cubes) {
-                        if (cube && cube->getAddress() == arg) {
-                            Serial.printf("found cube with address %s\n", cube->getAddress().c_str());
-                            cube->SetLamp(lampdata, size);
-                        }
-                    }
-                }
-            }
-        }
-        reportConnected(false);
-        delay(10);
-    }
-    controller.stop();
-    Serial.println("controller disconnected");
-    delay(5000);
-}
-*/
 
 //----------------------------------------
 

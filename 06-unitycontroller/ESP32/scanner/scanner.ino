@@ -11,8 +11,8 @@ const char *password = "0364276022";
 const char *controllerHost = "10.0.0.96";
 const int controllerPort = 1883;
 
-WiFiClient wifi;
-PubSubClient client(wifi);
+static WiFiClient wifi;
+static PubSubClient client(wifi);
 
 //----------------------------------------
 

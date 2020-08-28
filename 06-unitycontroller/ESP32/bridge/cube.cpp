@@ -2,16 +2,22 @@
 #include "cube.h"
 
 NimBLEUUID Cube::serviceUUID("10B20100-5B3B-4571-9508-CF3EFCD7BBAE");
-NimBLEUUID Cube::lampCharUUID("10B20103-5B3B-4571-9508-CF3EFCD7BBAE");
-NimBLEUUID Cube::batteryCharUUID("10B20108-5B3B-4571-9508-CF3EFCD7BBAE");
-NimBLEUUID Cube::buttonCharUUID("10B20107-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::idInfoCharUUID("10B20101-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::motorControlCharUUID("10B20102-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::lampControlCharUUID("10B20103-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::sensorInfoCharUUID("10B20106-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::buttonInfoCharUUID("10B20107-5B3B-4571-9508-CF3EFCD7BBAE");
+NimBLEUUID Cube::batteryInfoCharUUID("10B20108-5B3B-4571-9508-CF3EFCD7BBAE");
 
 Cube::Cube()
     : client(nullptr),
       service(nullptr),
-      lamp(nullptr),
-      battery(nullptr),
-      button(nullptr) {}
+      idInfo(nullptr),
+      motorControl(nullptr),
+      lampControl(nullptr),
+      sersorInfo(nullptr),
+      buttonInfo(nullptr),
+      batteryInfo(nullptr) {}
 
 Cube::~Cube() {
     disconnect();
@@ -43,25 +49,25 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
     }                                                             \
     Serial.println(" - Found our characteristic " #x);
 
-    GET_CHARACTERISTIC(lamp);
-    GET_CHARACTERISTIC(battery);
-    GET_CHARACTERISTIC(button);
+    GET_CHARACTERISTIC(lampControl);
+    GET_CHARACTERISTIC(buttonInfo);
+    GET_CHARACTERISTIC(batteryInfo);
 
-    battery->subscribe(true, notifyCallback);
-    button->subscribe(true, notifyCallback);
+    buttonInfo->subscribe(true, notifyCallback);
+    batteryInfo->subscribe(true, notifyCallback);
     return true;
 }
 
 void Cube::disconnect() {
-    lamp = nullptr;
-    if (battery) {
-        battery->unsubscribe();
+    lampControl = nullptr;
+    if (batteryInfo) {
+        batteryInfo->unsubscribe();
     }
-    battery = nullptr;
-    if (button) {
-        button->unsubscribe();
+    batteryInfo = nullptr;
+    if (buttonInfo) {
+        buttonInfo->unsubscribe();
     }
-    button = nullptr;
+    buttonInfo = nullptr;
     service = nullptr;
     if (client != nullptr) {
         client->disconnect();
@@ -71,9 +77,7 @@ void Cube::disconnect() {
 }
 
 void Cube::SetLamp(uint8_t* data, size_t length) {
-    lamp->writeValue(data, length, true);
-    // uint8_t a[] = {0x03, 0x00, 0x01, 0x01, 0x00, 0xff, 0x00};
-    // lamp->writeValue(a, sizeof(a), true);
+    lampControl->writeValue(data, length, true);
 }
 
 NimBLEClient* Cube::getClient() {
