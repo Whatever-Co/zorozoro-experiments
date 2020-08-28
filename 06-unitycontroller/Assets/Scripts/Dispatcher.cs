@@ -19,7 +19,14 @@ public class Dispatcher : MonoBehaviour
     {
         while (queue.TryDequeue(out var action))
         {
-            action?.Invoke();
+            try
+            {
+                action?.Invoke();
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+            }
         }
     }
 

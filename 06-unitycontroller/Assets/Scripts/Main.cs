@@ -13,13 +13,15 @@ using ZLogger;
 public class Main : MonoBehaviour
 {
 
-    static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
+    private static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
+
 
     public LayoutGroup InfoGroup;
     public GameObject BridgeInfoPrefab;
 
-    IMqttServer server;
-    Dictionary<string, Bridge> bridges = new Dictionary<string, Bridge>();
+    private IMqttServer server;
+    private Dictionary<string, Bridge> bridges = new Dictionary<string, Bridge>();
+    private CubeManager cubeManager;
 
 
     void Start()
@@ -30,6 +32,8 @@ public class Main : MonoBehaviour
         {
             Destroy(t.gameObject);
         }
+
+        cubeManager = new CubeManager();
 
         var optionsBuilder = new MqttServerOptionsBuilder()
         .WithDefaultEndpoint()
@@ -68,11 +72,16 @@ public class Main : MonoBehaviour
     void ClientDisconnectedHandler(MqttServerClientDisconnectedEventArgs e)
     {
         logger.ZLogWarning($"Client disconnected: id={e.ClientId}, type={e.DisconnectType}");
-        if (bridges.TryGetValue(e.ClientId, out var bridge))
-        {
-            bridge.Dispose();
-            bridges.Remove(e.ClientId);
-        }
+        // if (bridges.TryGetValue(e.ClientId, out var bridge))
+        // {
+        //     bridges.Remove(e.ClientId);
+        //     Dispatcher.runOnUiThread(() =>
+        //     {
+        //         Object.Destroy(bridge.InfoPanel.gameObject);
+        //         bridge.InfoPanel = null;
+        //         bridge.Dispose();
+        //     });
+        // }
     }
 
 
@@ -138,7 +147,7 @@ public class Main : MonoBehaviour
     }
 
 
-    void NewCubeHandler(string cubeId)
+    void NewCubeHandler(string address)
     {
         var kv = bridges
         .Where(i => !i.Value.IsBusy && i.Value.NumConnectedCubes < Bridge.MAX_CUBES_PER_BRIDGE)
@@ -146,11 +155,22 @@ public class Main : MonoBehaviour
         .FirstOrDefault();
         if (kv.Value != null)
         {
-            kv.Value.Connect(new Cube(cubeId));
+            kv.Value.Connect(cubeManager.CreateCube(address));
         }
         else
         {
             logger.ZLogDebug("No bridges available now...");
+        }
+    }
+
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            var color = new Color(Random.value, Random.value, Random.value);
+            logger.ZLogDebug(color.ToString());
+            cubeManager.SetLamp(color);
         }
     }
 

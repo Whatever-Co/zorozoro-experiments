@@ -23,7 +23,8 @@ public class Bridge : System.IDisposable
     public bool IsBusy { get; private set; } = false;
     public BridgeInfo InfoPanel
     {
-        get => info; set
+        get => info;
+        set
         {
             info = value;
             UpdateInfo();
