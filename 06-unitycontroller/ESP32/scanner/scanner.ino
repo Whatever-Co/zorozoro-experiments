@@ -20,7 +20,9 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice *advertisedDevice) {
         if (advertisedDevice->getName() == "toio Core Cube") {
             Serial.println(advertisedDevice->toString().c_str());
-            client.publish("newcube", advertisedDevice->getAddress().toString().c_str());
+            if (client.connected()) {
+                client.publish("newcube", advertisedDevice->getAddress().toString().c_str());
+            }
         }
     }
 };
