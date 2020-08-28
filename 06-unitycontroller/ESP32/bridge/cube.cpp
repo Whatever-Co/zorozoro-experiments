@@ -45,18 +45,10 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
 
     GET_CHARACTERISTIC(lamp);
     GET_CHARACTERISTIC(battery);
-    // GET_CHARACTERISTIC(button);
+    GET_CHARACTERISTIC(button);
 
     battery->subscribe(true, notifyCallback);
-    // button->subscribe(true, notifyCallback);
-
-    // uint8_t data[] = {0x04, 0x01, 0x04,
-    //                   0x10, 0x01, 0x01, 0xff, 0xff, 0x00,
-    //                   0x10, 0x01, 0x01, 0x00, 0xff, 0x00,
-    //                   0x10, 0x01, 0x01, 0x00, 0xff, 0xff,
-    //                   0x10, 0x01, 0x01, 0xff, 0x00, 0xff};
-    // uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 0x00, 0xff, 0x00};
-    // lamp->writeValue(data, sizeof(data), true);
+    button->subscribe(true, notifyCallback);
     return true;
 }
 
