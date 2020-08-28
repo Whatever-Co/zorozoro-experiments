@@ -1,15 +1,19 @@
-﻿using MQTTnet;
+﻿using Microsoft.Extensions.Logging;
+using MQTTnet;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
 using System.Collections.Generic;
-using System.Text;
 using System.Linq;
+using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
+using ZLogger;
 
 
 public class Main : MonoBehaviour
 {
+
+    static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
 
     public LayoutGroup InfoGroup;
     public GameObject BridgeInfoPrefab;
@@ -20,6 +24,8 @@ public class Main : MonoBehaviour
 
     void Start()
     {
+        logger.ZLogDebug("Init!");
+
         foreach (Transform t in InfoGroup.transform)
         {
             Destroy(t.gameObject);
@@ -55,13 +61,13 @@ public class Main : MonoBehaviour
     void ApplicationMessageInterceptor(MqttApplicationMessageInterceptorContext c)
     {
         c.AcceptPublish = true;
-        LogMessage(c);
+        // LogMessage(c);
     }
 
 
     void ClientDisconnectedHandler(MqttServerClientDisconnectedEventArgs e)
     {
-        Debug.LogWarning($"client disconnected: id={e.ClientId}, type={e.DisconnectType}");
+        logger.ZLogWarning($"Client disconnected: id={e.ClientId}, type={e.DisconnectType}");
         if (bridges.TryGetValue(e.ClientId, out var bridge))
         {
             bridge.Dispose();
@@ -80,13 +86,13 @@ public class Main : MonoBehaviour
             }
             var m = e.ApplicationMessage;
             var payload = Encoding.ASCII.GetString(m.Payload);
-            Debug.Log($"{e.ClientId},{m.Topic},{payload}");
+            logger.ZLogDebug($"Message received: ClientId = {e.ClientId}, Topic = {m.Topic}, Payload = {payload}");
             switch (m.Topic)
             {
                 case "hello":
                     HelloHandler(e.ClientId, payload);
                     break;
-                case "scanner":
+                case "newcube":
                     NewCubeHandler(payload);
                     break;
                 default:
@@ -99,7 +105,7 @@ public class Main : MonoBehaviour
         }
         catch (System.Exception ex)
         {
-            Debug.LogException(ex);
+            logger.ZLogError(ex, "what..?");
         }
     }
 
@@ -119,14 +125,14 @@ public class Main : MonoBehaviour
                     Dispatcher.runOnUiThread(() =>
                     {
                         var info = Instantiate(BridgeInfoPrefab).GetComponent<BridgeInfo>();
-                        Debug.Log(info);
+                        logger.ZLogDebug(info.ToString());
                         info.transform.SetParent(InfoGroup.transform);
                         b.InfoPanel = info;
                     });
                 }
                 break;
             default:
-                Debug.LogWarning("Unknow mode: " + mode);
+                logger.ZLogWarning("Unknow mode: " + mode);
                 break;
         }
     }
@@ -144,7 +150,7 @@ public class Main : MonoBehaviour
         }
         else
         {
-            Debug.Log("no bridges available now...");
+            logger.ZLogDebug("No bridges available now...");
         }
     }
 
@@ -164,14 +170,14 @@ public class Main : MonoBehaviour
 
         if (showPassword)
         {
-            Debug.Log(
+            logger.ZLogDebug(
                 $"New connection: ClientId = {context.ClientId}, Endpoint = {context.Endpoint},"
                 + $" Username = {context.Username}, Password = {context.Password},"
                 + $" CleanSession = {context.CleanSession}");
         }
         else
         {
-            Debug.Log(
+            logger.ZLogDebug(
                 $"New connection: ClientId = {context.ClientId}, Endpoint = {context.Endpoint},"
                 + $" Username = {context.Username}, CleanSession = {context.CleanSession}");
         }
@@ -185,7 +191,7 @@ public class Main : MonoBehaviour
             return;
         }
 
-        Debug.Log(successful ? $"New subscription: ClientId = {context.ClientId}, TopicFilter = {context.TopicFilter}" : $"Subscription failed for clientId = {context.ClientId}, TopicFilter = {context.TopicFilter}");
+        logger.ZLogDebug(successful ? $"New subscription: ClientId = {context.ClientId}, TopicFilter = {context.TopicFilter}" : $"Subscription failed for clientId = {context.ClientId}, TopicFilter = {context.TopicFilter}");
     }
 
 
@@ -198,7 +204,7 @@ public class Main : MonoBehaviour
 
         var payload = context.ApplicationMessage?.Payload == null ? null : Encoding.UTF8.GetString(context.ApplicationMessage?.Payload);
 
-        Debug.Log(
+        logger.ZLogDebug(
             $"Message: ClientId = {context.ClientId}, Topic = {context.ApplicationMessage?.Topic},"
             + $" Payload = {payload}, QoS = {context.ApplicationMessage?.QualityOfServiceLevel},"
             + $" Retain-Flag = {context.ApplicationMessage?.Retain}");

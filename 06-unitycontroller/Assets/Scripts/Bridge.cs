@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using MQTTnet;
 using MQTTnet.Protocol;
 using System.Collections.Generic;
@@ -6,12 +7,15 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using UnityEngine;
+using ZLogger;
 
 
 public class Bridge : System.IDisposable
 {
 
     public static readonly int MAX_CUBES_PER_BRIDGE = 8;
+
+    static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
 
 
     public string Id { get; }
@@ -41,7 +45,7 @@ public class Bridge : System.IDisposable
 
     public void Connect(Cube cube)
     {
-        Debug.Log($"connecting {cube.Address} through {Id}");
+        logger.ZLogDebug($"{Id}: Connecting {cube.Address}");
         IsBusy = true;
         connectingCube = cube;
 
@@ -78,12 +82,12 @@ public class Bridge : System.IDisposable
         {
             connectingCube.Bridge = this;
             cubes.Add(address, connectingCube);
-            Debug.Log($"new cube {address} added");
+            logger.ZLogDebug($"{Id}: New cube {address} added");
             connectingCube.SetLamp(Color.white);
         }
         else
         {
-            Debug.LogWarning("???");
+            logger.ZLogWarning($"{Id}: Unknown {address} connected..??");
         }
         connectingCube = null;
         UpdateInfo();
@@ -95,7 +99,7 @@ public class Bridge : System.IDisposable
         IsBusy = false;
         if (connectingCube != null)
         {
-            Debug.Log($"connect failed {connectingCube.Address}");
+            logger.ZLogDebug($"{Id}: Connect failed {connectingCube.Address}");
             connectingCube = null;
         }
         else
@@ -103,7 +107,7 @@ public class Bridge : System.IDisposable
             if (cubes.ContainsKey(address))
             {
                 cubes.Remove(address);
-                Debug.Log("cube removed " + address);
+                logger.ZLogDebug("{Id}: Cube removed " + address);
             }
         }
         UpdateInfo();
@@ -122,7 +126,7 @@ public class Bridge : System.IDisposable
             }
             else
             {
-                Debug.LogWarning($"unknown cube {address}");
+                logger.ZLogWarning($"{Id}: Battery notification from unknown cube {address}");
             }
         }
     }
@@ -148,7 +152,7 @@ public class Bridge : System.IDisposable
         }
         catch (System.Exception e)
         {
-            Debug.LogException(e);
+            logger.ZLogError(e, $"{Id}: ...?");
         }
     }
 
