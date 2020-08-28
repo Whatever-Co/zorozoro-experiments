@@ -5,10 +5,14 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 
 public class Main : MonoBehaviour
 {
+
+    public LayoutGroup InfoGroup;
+    public GameObject BridgeInfoPrefab;
 
     IMqttServer server;
     Dictionary<string, Bridge> bridges = new Dictionary<string, Bridge>();
@@ -16,6 +20,11 @@ public class Main : MonoBehaviour
 
     void Start()
     {
+        foreach (Transform t in InfoGroup.transform)
+        {
+            Destroy(t.gameObject);
+        }
+
         var optionsBuilder = new MqttServerOptionsBuilder()
         .WithDefaultEndpoint()
         .WithConnectionValidator(ConnectionValidator)
@@ -26,8 +35,6 @@ public class Main : MonoBehaviour
         server.UseClientDisconnectedHandler(ClientDisconnectedHandler);
         server.UseApplicationMessageReceivedHandler(ApplicationMessageReceivedHandler);
         server.StartAsync(optionsBuilder.Build());
-
-        NewCubeHandler("aa");
     }
 
 
@@ -65,23 +72,34 @@ public class Main : MonoBehaviour
 
     void ApplicationMessageReceivedHandler(MqttApplicationMessageReceivedEventArgs e)
     {
-        var m = e.ApplicationMessage;
-        var payload = Encoding.ASCII.GetString(m.Payload);
-        Debug.Log($"{e.ClientId},{m.Topic},{payload}");
-        switch (m.Topic)
+        try
         {
-            case "hello":
-                HelloHandler(e.ClientId, payload);
-                break;
-            case "scanner":
-                NewCubeHandler(payload);
-                break;
-            default:
-                if (bridges.TryGetValue(e.ClientId, out var bridge))
-                {
-                    bridge.ProcessPayload(m.Topic, payload);
-                }
-                break;
+            if (string.IsNullOrEmpty(e.ClientId))
+            {
+                return;
+            }
+            var m = e.ApplicationMessage;
+            var payload = Encoding.ASCII.GetString(m.Payload);
+            Debug.Log($"{e.ClientId},{m.Topic},{payload}");
+            switch (m.Topic)
+            {
+                case "hello":
+                    HelloHandler(e.ClientId, payload);
+                    break;
+                case "scanner":
+                    NewCubeHandler(payload);
+                    break;
+                default:
+                    if (bridges.TryGetValue(e.ClientId, out var bridge))
+                    {
+                        bridge.ProcessPayload(m.Topic, payload);
+                    }
+                    break;
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogException(ex);
         }
     }
 
@@ -96,7 +114,15 @@ public class Main : MonoBehaviour
             case "bridge":
                 if (!bridges.ContainsKey(clientId))
                 {
-                    bridges.Add(clientId, new Bridge(clientId, server));
+                    var b = new Bridge(clientId, server);
+                    bridges.Add(clientId, b);
+                    Dispatcher.runOnUiThread(() =>
+                    {
+                        var info = Instantiate(BridgeInfoPrefab).GetComponent<BridgeInfo>();
+                        Debug.Log(info);
+                        info.transform.SetParent(InfoGroup.transform);
+                        b.InfoPanel = info;
+                    });
                 }
                 break;
             default:

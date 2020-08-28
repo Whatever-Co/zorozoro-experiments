@@ -17,10 +17,19 @@ public class Bridge : System.IDisposable
     public string Id { get; }
     public int NumConnectedCubes { get => cubes?.Count ?? 0; }
     public bool IsBusy { get; private set; } = false;
+    public BridgeInfo InfoPanel
+    {
+        get => info; set
+        {
+            info = value;
+            UpdateInfo();
+        }
+    }
 
     private Cube connectingCube;
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
     private IApplicationMessagePublisher publisher;
+    private BridgeInfo info;
 
 
     public Bridge(string id, IApplicationMessagePublisher publisher)
@@ -47,7 +56,6 @@ public class Bridge : System.IDisposable
 
     public void ProcessPayload(string topic, string payload)
     {
-        Debug.Log($"ProcessPayload: {Id}, {topic}, {payload}");
         switch (topic)
         {
             case "connected":
@@ -78,6 +86,7 @@ public class Bridge : System.IDisposable
             Debug.LogWarning("???");
         }
         connectingCube = null;
+        UpdateInfo();
     }
 
 
@@ -97,13 +106,13 @@ public class Bridge : System.IDisposable
                 Debug.Log("cube removed " + address);
             }
         }
+        UpdateInfo();
     }
 
 
     private void HandleBattery(string payload)
     {
         var t = payload.Split(',');
-        Debug.LogWarning($"{t[0]}, {t[1]}");
         if (int.TryParse(t[1], out var value))
         {
             var address = t[0];
@@ -141,6 +150,16 @@ public class Bridge : System.IDisposable
         {
             Debug.LogException(e);
         }
+    }
+
+
+    void UpdateInfo()
+    {
+        Dispatcher.runOnUiThread(() =>
+        {
+            info?.SetAddress(Id);
+            info?.SetCubes(cubes.Select(x => x.Value).ToArray());
+        });
     }
 
 
