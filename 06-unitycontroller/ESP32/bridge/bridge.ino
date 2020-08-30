@@ -135,6 +135,9 @@ void reconnectToServer() {
         if (mq.connect(address.c_str(), "bye", 0, true, "")) {
             Serial.println("connected");
             mq.publish("hello", "", true);
+            for (auto &kv : cubes) {
+                subscribeTopics(kv.first);
+            }
             startAcceptNewCube();
         } else {
             Serial.print("failed, rc=");
