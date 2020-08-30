@@ -13,10 +13,10 @@ using UnityEngine.UI;
 using ZLogger;
 
 
-public class Main2 : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisconnectedHandler, IMqttApplicationMessageReceivedHandler
+public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisconnectedHandler, IMqttApplicationMessageReceivedHandler
 {
 
-    private static readonly ILogger<Main2> logger = LogManager.GetLogger<Main2>();
+    private static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
 
 
     public LayoutGroup InfoGroup;
@@ -24,26 +24,31 @@ public class Main2 : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisc
 
     private CubeManager cubeManager;
 
+    private Server server;
     private IMqttClientOptions options;
     private IMqttClient client;
 
 
-    void Start()
+    async void Start()
     {
         Application.targetFrameRate = 60;
+
+        server = new Server();
+        await server.Start();
 
         client = new MqttFactory().CreateMqttClient();
         client.UseConnectedHandler(this);
         client.UseDisconnectedHandler(this);
         client.UseApplicationMessageReceivedHandler(this);
+
+        cubeManager = new CubeManager(client);
+
         options = new MqttClientOptionsBuilder()
             .WithClientId("controller")
             .WithTcpServer("localhost")
             .WithCleanSession()
             .Build();
-        client.ConnectAsync(options);
-
-        cubeManager = new CubeManager(client);
+        await client.ConnectAsync(options);
     }
 
 
@@ -142,6 +147,7 @@ public class Main2 : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisc
         await client.DisconnectAsync();
         client.Dispose();
         client = null;
+        await server.Stop();
     }
 
 }

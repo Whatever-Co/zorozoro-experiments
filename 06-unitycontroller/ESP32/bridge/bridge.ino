@@ -194,8 +194,10 @@ void messageReceived(char *topic, byte *payload, unsigned int length) {
     Serial.print("Message received [");
     Serial.print(topic);
     Serial.print("] ");
-    for (int i = 0; i < length; i++) {
-        Serial.printf("%02X ", (char)payload[i]);
+    if (length < 128) {
+        for (int i = 0; i < length; i++) {
+            Serial.printf("%02X ", (char)payload[i]);
+        }
     }
     Serial.println();
 
