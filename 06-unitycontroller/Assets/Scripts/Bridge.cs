@@ -15,7 +15,7 @@ public class Bridge : System.IDisposable
 
     public static readonly int MAX_CUBES_PER_BRIDGE = 8;
 
-    static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
+    static readonly ILogger<Bridge> logger = LogManager.GetLogger<Bridge>();
 
 
     public string Id { get; }

@@ -30,6 +30,7 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
     client->setClientCallbacks(clientCallbacks, false);
     Serial.println(" - Created client");
     client->connect(NimBLEAddress(address.c_str(), BLE_ADDR_RANDOM));
+    Serial.println(" - Connected");
     service = client->getService(serviceUUID);
     if (service == nullptr) {
         Serial.print("Failed to find our service UUID: ");

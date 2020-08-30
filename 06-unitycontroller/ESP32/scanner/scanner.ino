@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ESPmDNS.h>
 #include <NimBLEAdvertisedDevice.h>
 #include <NimBLEDevice.h>
 #include <PubSubClient.h>
@@ -6,9 +7,12 @@
 
 //----------------------------------------
 
-const char *ssid = "WHEREVER";
-const char *password = "0364276022";
-const char *controllerHost = "10.0.0.96";
+// const char *ssid = "WHEREVER";
+// const char *password = "0364276022";
+// const char *controllerHost = "10.0.0.96";
+const char *ssid = "NETGEAR85";
+const char *password = "09077518842";
+const char *controllerHost = "10.77.1.141";
 const int controllerPort = 1883;
 
 static WiFiClient wifi;
@@ -33,7 +37,7 @@ void scan(void *param) {
     scan->setActiveScan(true);
     while (true) {
         scan->start(3, false);
-        delay(100);
+        delay(1000);
     }
 }
 
@@ -94,12 +98,10 @@ void reconnect() {
         Serial.print("Attempting MQTT connection...");
         if (client.connect(WiFi.localIP().toString().c_str())) {
             Serial.println("connected");
-            client.publish("hello", "scanner");
         } else {
             Serial.print("failed, rc=");
             Serial.print(client.state());
             Serial.println(" try again in 5 seconds");
-            // Wait 5 seconds before retrying
             delay(5000);
         }
     }

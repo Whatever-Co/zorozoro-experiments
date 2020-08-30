@@ -3,23 +3,31 @@
 #include <PubSubClient.h>
 #include <WiFi.h>
 
+#include <map>
+#include <memory>
+#include <vector>
+
 #include "cube.h"
 
 //----------------------------------------
 
-const char *ssid = "WHEREVER";
-const char *password = "0364276022";
-const char *controllerHost = "10.0.0.96";
+// const char *ssid = "WHEREVER";
+// const char *password = "0364276022";
+// const char *controllerHost = "10.0.0.96";
+const char *ssid = "NETGEAR85";
+const char *password = "09077518842";
+const char *controllerHost = "10.77.1.141";
 const int controllerPort = 1883;
 
 static WiFiClient wifi;
 static PubSubClient mq(wifi);
 
-static Cube *cubes[MAX_CUBES] = {nullptr};
+static std::map<String, std::shared_ptr<Cube>> cubes;
 
 //----------------------------------------
 
-void disconnect(NimBLEClient *client);
+void startAcceptNewCube();
+void unsubscribeTopics(String address);
 
 //----------------------------------------
 
@@ -30,7 +38,20 @@ class MyClientCallback : public NimBLEClientCallbacks {
     }
     void onDisconnect(NimBLEClient *client) {
         Serial.printf("MyClientCallback: onDisconnect: %s\n", client->getPeerAddress().toString().c_str());
-        disconnect(client);
+        for (const auto &kv : cubes) {
+            auto &cube = kv.second;
+            if (cube->getClient() == client) {
+                char topic[32];
+                sprintf(topic, "%s/disconnected", cube->getAddress().c_str());
+                mq.publish(topic, "", true);
+                Serial.printf("Published: %s\n", topic);
+                unsubscribeTopics(cube->getAddress());
+                cubes.erase(kv.first);
+
+                startAcceptNewCube();
+                break;
+            }
+        }
     }
 };
 
@@ -41,18 +62,18 @@ static MyClientCallback clientCallback;
 void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, size_t length, bool isNotify) {
     auto address = characteristic->getRemoteService()->getClient()->getPeerAddress().toString();
     auto uuid = characteristic->getUUID();
-    char payload[32];
+    char topic[32], payload[32];
     if (uuid == Cube::buttonInfoCharUUID) {
+        sprintf(topic, "%s/button", address.c_str());
         uint8_t id = data[0];
         uint8_t state = data[1];
-        sprintf(payload, "%s,%d,%d", address.c_str(), id, state);
-        mq.publish("button", payload);
-        Serial.printf("button,%s\n", payload);
+        mq.publish(topic, &state, 1);
+        Serial.printf("Published: %s,%d\n", topic, state);
     } else if (uuid == Cube::batteryInfoCharUUID) {
+        sprintf(topic, "%s/battery", address.c_str());
         uint8_t value = data[0];
-        sprintf(payload, "%s,%d", address.c_str(), value);
-        mq.publish("battery", payload);
-        Serial.printf("battery,%s\n", payload);
+        mq.publish(topic, &value, 1);
+        Serial.printf("Published: %s,%d\n", topic, value);
     }
 }
 
@@ -89,7 +110,7 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     mq.setServer(controllerHost, controllerPort);
-    mq.setCallback(callback);
+    mq.setCallback(messageReceived);
 
     NimBLEDevice::init("");
 }
@@ -99,7 +120,7 @@ void setup() {
 void loop() {
     if (!mq.connected()) {
         Serial.println("connection failed");
-        reconnect();
+        reconnectToServer();
     }
     mq.loop();
     delay(100);
@@ -107,20 +128,18 @@ void loop() {
 
 //----------------------------------------
 
-void reconnect() {
+void reconnectToServer() {
     while (!mq.connected()) {
         Serial.print("Attempting MQTT connection...");
         auto address = WiFi.localIP().toString();
-        if (mq.connect(address.c_str())) {
+        if (mq.connect(address.c_str(), "bye", 0, true, "")) {
             Serial.println("connected");
-            mq.publish("hello", "bridge");
-            auto topic = address + "/#";
-            mq.subscribe(topic.c_str());
+            mq.publish("hello", "", true);
+            startAcceptNewCube();
         } else {
             Serial.print("failed, rc=");
             Serial.print(mq.state());
             Serial.println(" try again in 5 seconds");
-            // Wait 5 seconds before retrying
             delay(5000);
         }
     }
@@ -128,8 +147,48 @@ void reconnect() {
 
 //----------------------------------------
 
-void callback(char *topic, byte *payload, unsigned int length) {
-    Serial.print("Message arrived [");
+static const char *requiredTopics[] = {"lamp"};
+
+void subscribeTopics(String address) {
+    char topic[32];
+    for (auto t : requiredTopics) {
+        sprintf(topic, "%s/%s", address.c_str(), t);
+        mq.subscribe(topic);
+        Serial.printf("Subscribed: %s\n", topic);
+    }
+}
+
+//----------------------------------------
+
+void unsubscribeTopics(String address) {
+    char topic[32];
+    for (auto t : requiredTopics) {
+        sprintf(topic, "%s/%s", address.c_str(), t);
+        mq.unsubscribe(topic);
+        Serial.printf("Unsubscribed: %s\n", topic);
+    }
+}
+
+//----------------------------------------
+
+void startAcceptNewCube() {
+    if (cubes.size() == MAX_CUBES) {
+        Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
+        return;
+    }
+    mq.subscribe("newcube");
+    Serial.println("Start accept new cube");
+}
+
+void stopAcceptNewCube() {
+    mq.unsubscribe("newcube");
+    Serial.println("Stop accept new cube");
+}
+
+//----------------------------------------
+
+void messageReceived(char *topic, byte *payload, unsigned int length) {
+    Serial.print("Message received [");
     Serial.print(topic);
     Serial.print("] ");
     for (int i = 0; i < length; i++) {
@@ -138,99 +197,58 @@ void callback(char *topic, byte *payload, unsigned int length) {
     Serial.println();
 
     String t(topic);
-    int i = t.indexOf('/');
-    if (i == -1) {
-        return;
-    }
-    t = t.substring(i + 1);
-    Serial.println(t);
-    if (t == "connect") {
+    if (t == "newcube") {
         char tmp[length + 1];
         memcpy(tmp, payload, length);
         tmp[length] = 0;
         String address(tmp);
-        auto cube = connect(address);
-        if (cube) {
-            mq.publish("connected", tmp);
-            Serial.printf("connected\t%s\n", tmp);
-            reportConnected(true);
-        } else {
-            mq.publish("disconnected", tmp);
-            Serial.printf("disconnected\t%s\n", tmp);
-        }
-    } else if (t == "lamp") {
-        char tmp[18] = {0};
-        memcpy(tmp, payload, 17);
-        String address(tmp);
-        for (auto cube : cubes) {
-            if (cube && cube->getAddress() == address) {
-                Serial.printf("found cube with address %s\n", tmp);
-                cube->SetLamp(&payload[18], payload[17]);
-            }
-        }
+        stopAcceptNewCube();
+        connectToCube(address);
+        startAcceptNewCube();
+        return;
+    }
+
+    int i = t.indexOf('/');
+    if (i == -1) {
+        return;
+    }
+    String address(t.substring(0, i));
+    t = t.substring(i + 1);
+    Serial.printf("address=%s, topic=%s\n", address.c_str(), t.c_str());
+    if (cubes.count(address) == 0) {
+        return;
+    }
+    auto cube = cubes.at(address);
+    if (t == "lamp") {
+        cube->SetLamp(payload, length);
     }
 }
 
 //----------------------------------------
 
-Cube *connect(String address) {
+void connectToCube(String address) {
     if (NimBLEDevice::getClientListSize() >= MAX_CUBES) {
-        Serial.println("cannot connect no more cubes..");
-        return nullptr;
+        Serial.println("Cannot connect no more cubes..");
+        return;
     }
 
-    auto cube = new Cube();
+    if (cubes.count(address) > 0) {
+        Serial.printf("Already connected to %s\n", address.c_str());
+        return;
+    }
+
+    auto cube = std::make_shared<Cube>();
     if (!cube->connect(address, &clientCallback, notifyCallback)) {
-        delete cube;
-        Serial.println("connect failed");
-        return nullptr;
+        Serial.printf("Connect to %s failed\n", address.c_str());
+        return;
     }
-    for (int i = 0; i < MAX_CUBES; i++) {
-        if (cubes[i] == nullptr) {
-            cubes[i] = cube;
-            break;
-        }
-    }
-    return cube;
-}
 
-//----------------------------------------
+    subscribeTopics(address);
 
-void disconnect(NimBLEClient *client) {
-    for (int i = 0; i < MAX_CUBES; i++) {
-        auto cube = cubes[i];
-        if (cube != nullptr && cube->getClient() == client) {
-            // controller.printf("disconnected\t%s\n", cube->getAddress().c_str());
-            mq.publish("disconnected", cube->getAddress().c_str());
-            Serial.printf("disconnected\t%s\n", cube->getAddress().c_str());
-            delete cube;
-            cubes[i] = nullptr;
-            break;
-        }
-    }
-    reportConnected(true);
-}
+    char topic[32];
+    sprintf(topic, "%s/connected", address.c_str());
+    mq.publish(topic, "", true);
+    Serial.printf("Published: %s\n", topic);
 
-//----------------------------------------
-
-static int prevReportTime = 0;
-static int reportInterval = 5000;
-
-void reportConnected(bool force) {
-    int dt = millis() - prevReportTime;
-    if (force || dt > reportInterval) {
-        String list = "cubes\t";
-        int count = 0;
-        for (int i = 0; i < MAX_CUBES; i++) {
-            if (cubes[i] != nullptr) {
-                if (count++ > 0) {
-                    list += ",";
-                }
-                list += cubes[i]->getAddress();
-            }
-        }
-        // controller.println(list);
-        Serial.println(list);
-        prevReportTime = millis();
-    }
+    cubes[address] = cube;
 }
