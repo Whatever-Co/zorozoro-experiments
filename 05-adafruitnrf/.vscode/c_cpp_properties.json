@@ -8,9 +8,7 @@
             "name": "Mac",
             "includePath": [
                 "/Users/hiko/Library/Arduino15/packages/adafruit/tools/**",
-                "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/**",
-                "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/**",
-                "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/cores/nRF5/TinyUSB/**"
+                "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/**"
             ],
             "forcedInclude": [],
             "macFrameworkPath": [
