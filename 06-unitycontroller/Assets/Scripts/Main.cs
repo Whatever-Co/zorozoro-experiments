@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UI;
 using ZLogger;
 
 
@@ -18,9 +17,6 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     private static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
 
-
-    public LayoutGroup InfoGroup;
-    public GameObject BridgeInfoPrefab;
 
     private CubeManager cubeManager;
 
@@ -41,7 +37,8 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         client.UseDisconnectedHandler(this);
         client.UseApplicationMessageReceivedHandler(this);
 
-        cubeManager = new CubeManager(client);
+        cubeManager = GetComponent<CubeManager>();
+        cubeManager.Publisher = client;
 
         options = new MqttClientOptionsBuilder()
             .WithClientId("controller")
@@ -57,7 +54,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         logger.ZLogDebug("Connected");
         return Task.Run(async () =>
         {
-            var topics = new[] { "+/connected", "+/disconnected", "+/button", "+/battery" };
+            var topics = new[] { "+/connected", "+/disconnected", "+/position", "+/button", "+/battery" };
             foreach (var t in topics)
             {
                 await client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(t).Build());
@@ -87,7 +84,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     public Task HandleApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs e)
     {
-        try
+        Dispatcher.runOnUiThread(() =>
         {
             var m = e.ApplicationMessage;
             var payload = m.Payload != null ? Encoding.UTF8.GetString(m.Payload) : "";
@@ -97,23 +94,24 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
             switch (t[1])
             {
                 case "connected":
-                    var cube = cubeManager.CreateCube(address);
+                    var cube = cubeManager.AddOrGetCube(address);
                     cube.SetLamp(Color.white);
                     break;
 
                 case "disconnected":
                     break;
 
+                case "position":
+                    cubeManager.SetPosition(address, m.Payload);
+                    break;
+
                 case "button":
                     byte state = m.Payload[0];
                     if (state > 0)
                     {
-                        Dispatcher.runOnUiThread(() =>
-                        {
-                            var color = new Color(Random.value, Random.value, Random.value);
-                            logger.ZLogDebug(color.ToString());
-                            cubeManager.SetLamp(color);
-                        });
+                        var color = new Color(Random.value, Random.value, Random.value);
+                        logger.ZLogDebug(color.ToString());
+                        cubeManager.SetLampAll(color);
                     }
                     break;
 
@@ -122,11 +120,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                     cubeManager.SetBattery(address, value);
                     break;
             }
-        }
-        catch (System.Exception ex)
-        {
-            logger.ZLogDebug(ex, "");
-        }
+        });
         return null;
     }
 
@@ -137,7 +131,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         {
             var color = new Color(Random.value, Random.value, Random.value);
             logger.ZLogDebug(color.ToString());
-            cubeManager.SetLamp(color);
+            cubeManager.SetLampAll(color);
         }
     }
 

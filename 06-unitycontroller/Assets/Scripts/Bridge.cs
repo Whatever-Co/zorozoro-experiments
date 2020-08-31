@@ -81,7 +81,6 @@ public class Bridge : System.IDisposable
         IsBusy = false;
         if (connectingCube.Address == address)
         {
-            connectingCube.Bridge = this;
             cubes.Add(address, connectingCube);
             logger.ZLogDebug($"{Id}: New cube {address} added");
             connectingCube.SetLamp(Color.white);

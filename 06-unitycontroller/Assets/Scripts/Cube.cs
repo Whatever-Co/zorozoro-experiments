@@ -1,32 +1,67 @@
 using Microsoft.Extensions.Logging;
 using MQTTnet;
-using MQTTnet.Protocol;
-using System.Collections.Generic;
-using System.Linq;
 using System.IO;
-using System.Text;
 using System.Threading;
 using UnityEngine;
 using ZLogger;
 
 
-public class Cube
+public class Cube : MonoBehaviour
 {
 
-    public string Address { get; }
-    public bool IsConnected { get; set; }
-    public Bridge Bridge { get; set; }
+    public string Address { get; private set; }
+    public bool IsConnected { get; private set; }
 
     public int Battery { get; private set; } = -1;
 
     private IApplicationMessagePublisher publisher;
 
+    // private Vector3 currentPosition;
+    // private Quaternion currentRotation;
 
-    public Cube(string address, IApplicationMessagePublisher publisher)
+
+
+    void Update()
+    {
+        // transform.localPosition = Vector3.Lerp(transform.localPosition, currentPosition, 0.5f);
+        // transform.localRotation = Quaternion.Slerp(transform.localRotation, currentRotation, 0.5f);
+    }
+
+
+    public void Init(string address, IApplicationMessagePublisher publisher)
     {
         Address = address;
         IsConnected = false;
         this.publisher = publisher;
+    }
+
+
+    public void SetPosition(byte[] data)
+    {
+        using (var stream = new MemoryStream(data))
+        using (var reader = new BinaryReader(stream))
+        {
+            var type = reader.ReadByte();
+            switch (type)
+            {
+                case 0x01: // Position ID
+                    var centerX = reader.ReadUInt16();
+                    var centerY = reader.ReadUInt16();
+                    var centerRotation = reader.ReadUInt16();
+                    // var sensorX = reader.ReadUInt16();
+                    // var sensorY = reader.ReadUInt16();
+                    // var sensorRotation = reader.ReadUInt16();
+                    transform.localPosition = new Vector3(centerX, 0, -centerY);
+                    transform.localRotation = Quaternion.Euler(0, centerRotation, 0);
+                    break;
+                case 0x02: // Standard ID
+                    break;
+                case 0x03: // Position ID missed
+                    break;
+                case 0x04: // Standard ID missed
+                    break;
+            }
+        }
     }
 
 
@@ -89,9 +124,9 @@ public class Cube
     public void WriteLampCommand(byte[] data)
     {
         var message = new MqttApplicationMessageBuilder()
-        .WithTopic(Address + "/lamp")
-        .WithPayload(data)
-        .Build();
+            .WithTopic(Address + "/lamp")
+            .WithPayload(data)
+            .Build();
         publisher.PublishAsync(message, CancellationToken.None);
     }
 

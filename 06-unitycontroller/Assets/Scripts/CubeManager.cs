@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MQTTnet;
@@ -6,34 +5,42 @@ using ZLogger;
 using Microsoft.Extensions.Logging;
 
 
-public class CubeManager : IDisposable
+public class CubeManager : MonoBehaviour
 {
 
     private static readonly ILogger<CubeManager> logger = LogManager.GetLogger<CubeManager>();
 
-    private IApplicationMessagePublisher publisher;
+
+    public IApplicationMessagePublisher Publisher { get; set; }
+    public Transform World;
+
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
 
 
-    public CubeManager(IApplicationMessagePublisher publisher)
-    {
-        this.publisher = publisher;
-    }
-
-
-    public Cube CreateCube(string address)
+    public Cube AddOrGetCube(string address)
     {
         if (cubes.TryGetValue(address, out var cube))
         {
             return cube;
         }
-        cube = new Cube(address, publisher);
+
+        var prefab = Resources.Load<GameObject>("Prefabs/Cube");
+        cube = UnityEngine.Object.Instantiate((prefab).GetComponent<Cube>());
+        cube.Init(address, Publisher);
+        cube.transform.SetParent(World, false);
         cubes.Add(address, cube);
         return cube;
     }
 
 
-    public void SetLamp(Color32 color)
+    public void SetPosition(string address, byte[] data)
+    {
+        var cube = AddOrGetCube(address);
+        cube.SetPosition(data);
+    }
+
+
+    public void SetLampAll(Color32 color)
     {
         foreach (var (address, cube) in cubes)
         {
@@ -45,20 +52,8 @@ public class CubeManager : IDisposable
     public void SetBattery(string address, int value)
     {
         logger.ZLogTrace("Setting battery of {0} to {1}", address, value);
-        if (!cubes.ContainsKey(address))
-        {
-            logger.ZLogWarning("Address {0} not found.. adding...", address);
-            CreateCube(address);
-        }
-        if (cubes.TryGetValue(address, out var cube))
-        {
-            cube.SetBattery(value);
-        }
-    }
-
-
-    public void Dispose()
-    {
+        var cube = AddOrGetCube(address);
+        cube.SetBattery(value);
     }
 
 }

@@ -11,12 +11,12 @@
 
 //----------------------------------------
 
-// const char *ssid = "WHEREVER";
-// const char *password = "0364276022";
-// const char *controllerHost = "10.0.0.96";
-const char *ssid = "NETGEAR85";
-const char *password = "09077518842";
-const char *controllerHost = "10.77.1.141";
+const char *ssid = "WHEREVER";
+const char *password = "0364276022";
+const char *controllerHost = "10.0.0.123";
+// const char *ssid = "NETGEAR85";
+// const char *password = "09077518842";
+// const char *controllerHost = "10.77.1.141";
 const int controllerPort = 1883;
 
 static WiFiClient wifi;
@@ -63,7 +63,11 @@ void notifyCallback(NimBLERemoteCharacteristic *characteristic, uint8_t *data, s
     auto address = characteristic->getRemoteService()->getClient()->getPeerAddress().toString();
     auto uuid = characteristic->getUUID();
     char topic[32], payload[32];
-    if (uuid == Cube::buttonInfoCharUUID) {
+    if (uuid == Cube::idInfoCharUUID) {
+        sprintf(topic, "%s/position", address.c_str());
+        mq.publish(topic, data, length);
+        Serial.printf("Published: %s,%d,%d\n", topic, data[0], length);
+    } else if (uuid == Cube::buttonInfoCharUUID) {
         sprintf(topic, "%s/button", address.c_str());
         uint8_t id = data[0];
         uint8_t state = data[1];
