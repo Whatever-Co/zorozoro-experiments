@@ -154,7 +154,7 @@ void reconnectToServer() {
 
 //----------------------------------------
 
-static const char *requiredTopics[] = {"lamp"};
+static const char *requiredTopics[] = {"motor", "lamp"};
 
 void subscribeTopics(String address) {
     char topic[32];
@@ -228,7 +228,9 @@ void messageReceived(char *topic, byte *payload, unsigned int length) {
         return;
     }
     auto cube = cubes.at(address);
-    if (t == "lamp") {
+    if (t == "motor") {
+        cube->SetMotor(payload, length);
+    } else if (t == "lamp") {
         cube->SetLamp(payload, length);
     }
 }

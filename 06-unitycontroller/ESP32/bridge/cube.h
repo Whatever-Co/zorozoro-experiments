@@ -19,6 +19,7 @@ class Cube {
     bool connect(String address, NimBLEClientCallbacks *clientCallbacks, notify_callback notifyCallback);
     void disconnect();
 
+    void SetMotor(uint8_t *data, size_t length);
     void SetLamp(uint8_t *data, size_t length);
 
     NimBLEClient *getClient();

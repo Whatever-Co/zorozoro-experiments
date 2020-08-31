@@ -51,6 +51,7 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
     Serial.println(" - Found our characteristic " #x);
 
     GET_CHARACTERISTIC(idInfo);
+    GET_CHARACTERISTIC(motorControl);
     GET_CHARACTERISTIC(lampControl);
     GET_CHARACTERISTIC(buttonInfo);
     GET_CHARACTERISTIC(batteryInfo);
@@ -77,6 +78,10 @@ void Cube::disconnect() {
         NimBLEDevice::deleteClient(client);
         client = nullptr;
     }
+}
+
+void Cube::SetMotor(uint8_t* data, size_t length) {
+    motorControl->writeValue(data, length, false);
 }
 
 void Cube::SetLamp(uint8_t* data, size_t length) {

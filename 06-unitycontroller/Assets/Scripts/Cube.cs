@@ -36,6 +36,20 @@ public class Cube : MonoBehaviour
     }
 
 
+    public void SetMotor()
+    {
+        byte[] data = { 0x02,
+                        0x01, 0x01, 50,
+                        0x02, 0x02, 50,
+                        100 };
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic(Address + "/motor")
+            .WithPayload(data)
+            .Build();
+        publisher.PublishAsync(message, CancellationToken.None);
+    }
+
+
     public void SetPosition(byte[] data)
     {
         using (var stream = new MemoryStream(data))
@@ -61,33 +75,6 @@ public class Cube : MonoBehaviour
                 case 0x04: // Standard ID missed
                     break;
             }
-        }
-    }
-
-
-    public void SetBattery(int battery)
-    {
-        if (Battery == battery)
-        {
-            return;
-        }
-
-        Battery = battery;
-        if (battery <= 10)
-        {
-            SetLampBlink(Color.red, 300);
-        }
-        else if (battery <= 20)
-        {
-            SetLamp(Color.red);
-        }
-        else if (battery <= 50)
-        {
-            SetLamp(254, 176, 25);
-        }
-        else
-        {
-            SetLamp(Color.green);
         }
     }
 
@@ -130,6 +117,32 @@ public class Cube : MonoBehaviour
         publisher.PublishAsync(message, CancellationToken.None);
     }
 
+
+    public void SetBattery(int battery)
+    {
+        if (Battery == battery)
+        {
+            return;
+        }
+
+        Battery = battery;
+        if (battery <= 10)
+        {
+            SetLampBlink(Color.red, 300);
+        }
+        else if (battery <= 20)
+        {
+            SetLamp(Color.red);
+        }
+        else if (battery <= 50)
+        {
+            SetLamp(254, 176, 25);
+        }
+        else
+        {
+            SetLamp(Color.green);
+        }
+    }
 
 
     public override string ToString() => $"[Cube Address={Address} IsConnected={IsConnected}]";
