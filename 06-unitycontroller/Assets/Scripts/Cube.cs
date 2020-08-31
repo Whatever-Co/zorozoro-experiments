@@ -36,17 +36,35 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void SetMotor()
+    public void SetMotor(int angle)
     {
-        byte[] data = { 0x02,
-                        0x01, 0x01, 50,
-                        0x02, 0x02, 50,
-                        100 };
-        var message = new MqttApplicationMessageBuilder()
-            .WithTopic(Address + "/motor")
-            .WithPayload(data)
-            .Build();
-        publisher.PublishAsync(message, CancellationToken.None);
+        // byte[] data = { 0x02,
+        //                 0x01, 0x01, 50,
+        //                 0x02, 0x02, 50,
+        //                 100 };
+        try
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                byte[] data = { 0x03, 0x00, 5, 0, 100, 0, 0x00 };
+                writer.Write(data);
+                writer.Write((ushort)0xffff);
+                writer.Write((ushort)0xffff);
+                writer.Write((ushort)((0x00 << 13) | angle));
+                Debug.Log(stream.ToArray());
+                var message = new MqttApplicationMessageBuilder()
+                    .WithTopic(Address + "/motor")
+                    .WithPayload(stream.ToArray())
+                    .WithAtLeastOnceQoS()
+                    .Build();
+                publisher.PublishAsync(message, CancellationToken.None);
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogException(e);
+        }
     }
 
 
@@ -113,6 +131,7 @@ public class Cube : MonoBehaviour
         var message = new MqttApplicationMessageBuilder()
             .WithTopic(Address + "/lamp")
             .WithPayload(data)
+            .WithAtLeastOnceQoS()
             .Build();
         publisher.PublishAsync(message, CancellationToken.None);
     }
@@ -124,17 +143,22 @@ public class Cube : MonoBehaviour
         {
             return;
         }
-
         Battery = battery;
-        if (battery <= 10)
+        ShowBatteryStatus();
+    }
+
+
+    public void ShowBatteryStatus()
+    {
+        if (Battery <= 10)
         {
             SetLampBlink(Color.red, 300);
         }
-        else if (battery <= 20)
+        else if (Battery <= 20)
         {
             SetLamp(Color.red);
         }
-        else if (battery <= 50)
+        else if (Battery <= 50)
         {
             SetLamp(254, 176, 25);
         }

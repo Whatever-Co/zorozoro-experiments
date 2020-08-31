@@ -56,7 +56,7 @@ bool Cube::connect(String address, NimBLEClientCallbacks* clientCallbacks, notif
     GET_CHARACTERISTIC(buttonInfo);
     GET_CHARACTERISTIC(batteryInfo);
 
-    idInfo->subscribe(true, notifyCallback);
+    // idInfo->subscribe(true, notifyCallback);
     buttonInfo->subscribe(true, notifyCallback);
     batteryInfo->subscribe(true, notifyCallback);
     return true;

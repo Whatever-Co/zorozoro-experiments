@@ -106,14 +106,14 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                     break;
 
                 case "button":
-                    byte state = m.Payload[0];
-                    if (state > 0)
-                    {
-                        // var color = new Color(Random.value, Random.value, Random.value);
-                        // logger.ZLogDebug(color.ToString());
-                        // cubeManager.SetLampAll(color);
-                        cubeManager.AddOrGetCube(address).SetMotor();
-                    }
+                    // byte state = m.Payload[0];
+                    // if (state > 0)
+                    // {
+                    //     // var color = new Color(Random.value, Random.value, Random.value);
+                    //     // logger.ZLogDebug(color.ToString());
+                    //     // cubeManager.SetLampAll(color);
+                    //     cubeManager.AddOrGetCube(address).SetMotor();
+                    // }
                     break;
 
                 case "battery":
@@ -130,10 +130,22 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            var color = new Color(Random.value, Random.value, Random.value);
-            logger.ZLogDebug(color.ToString());
-            cubeManager.SetLampAll(color);
+            // var color = new Color(Random.value, Random.value, Random.value);
+            // logger.ZLogDebug(color.ToString());
+            // cubeManager.SetLampAll(color);
         }
+    }
+
+
+    public void ShowBatteryStatus()
+    {
+        cubeManager.ShowBatteryStatus();
+    }
+
+
+    public void RandomRotate()
+    {
+        cubeManager.SetMotorAll();
     }
 
 

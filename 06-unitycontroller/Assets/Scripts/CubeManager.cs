@@ -40,11 +40,34 @@ public class CubeManager : MonoBehaviour
     }
 
 
+    int angle = 0;
+
+
+    public void SetMotorAll()
+    {
+        var a = Random.Range(0, 8) * 45;
+        foreach (var (address, cube) in cubes)
+        {
+            cube.SetMotor(a);
+            angle += 90;
+        }
+    }
+
+
     public void SetLampAll(Color32 color)
     {
         foreach (var (address, cube) in cubes)
         {
             cube.SetLamp(color);
+        }
+    }
+
+
+    public void ShowBatteryStatus()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.ShowBatteryStatus();
         }
     }
 
