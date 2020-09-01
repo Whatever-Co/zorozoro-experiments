@@ -2,5 +2,10 @@
     "editor.formatOnType": true,
     "editor.formatOnSave": true,
     "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0}",
-    "python.pythonPath": "/Users/hiko/.anyenv/envs/pyenv/versions/3.8.1/bin/python"
+    "python.pythonPath": "/Users/hiko/.anyenv/envs/pyenv/versions/3.8.1/bin/python",
+    "python.autoComplete.extraPaths": [
+        null,
+        "/Users/hiko/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.2/stubs",
+        "/Users/hiko/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20200829/adafruit-circuitpython-bundle-py-20200901/lib"
+    ]
 }
