@@ -1,0 +1,13 @@
+{
+    "python.envFile": "/Volumes/CIRCUITPY/.env",
+    "python.autoComplete.extraPaths": [
+        "/Users/hiko/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.2/boards/0x239A/0x802A",
+        "/Users/hiko/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.2/stubs",
+        "/Users/hiko/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20200829/adafruit-circuitpython-bundle-py-20200829/lib"
+    ],
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "circuitpython.board.vid": "0x239A",
+    "circuitpython.board.pid": "0x802A"
+}
