@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "lamp.h"
+
 class Cube {
    public:
     static uint8_t ServiceUUID[];
@@ -27,7 +29,9 @@ class Cube {
     static void notify_callback(BLEClientCharacteristic *chr, uint8_t *data, uint16_t len) {
         Serial.printf("notify_callback: %d, %d\n", len, data[0]);
         auto cube = Cube::cubes[chr->connHandle()];
-        cube->notify_battery(data[0]);
+        if (chr == cube->battery.get()) {
+            cube->notify_battery(data[0]);
+        }
     }
 
    public:
@@ -55,7 +59,7 @@ class Cube {
         Serial.println("Service Found");
 
         Serial.print("Discovering Lamp Characteristic ... ");
-        lamp = std::make_shared<BLEClientCharacteristic>(LampCharacteristicUUID);
+        lamp = std::make_shared<LampControl>();
         lamp->begin();
         if (!lamp->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
@@ -76,25 +80,19 @@ class Cube {
         battery->enableNotify();
         Serial.println("Characteristic Found");
 
-        setLamp();
+        lamp->set_color(255, 255, 255);
         return true;
     }
 
     void notify_battery(uint8_t value) {
         if (value <= 10) {
-            uint8_t data[] = {0x04, 0x00, 0x02,
-                              30, 1, 1, 255, 0, 0,
-                              30, 1, 1, 0, 0, 0};
-            lamp->write_resp(data, sizeof(data));
+            lamp->set_blink(255, 0, 0, 300);
         } else if (value <= 20) {
-            uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 255, 0, 0};
-            lamp->write_resp(data, sizeof(data));
+            lamp->set_color(255, 0, 0);
         } else if (value <= 50) {
-            uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 255, 176, 25};
-            lamp->write_resp(data, sizeof(data));
+            lamp->set_color(255, 176, 25);
         } else {
-            uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 0, 255, 0};
-            lamp->write_resp(data, sizeof(data));
+            lamp->set_color(0, 255, 0);
         }
     }
 
@@ -109,15 +107,10 @@ class Cube {
         service = nullptr;
     }
 
-    void setLamp() {
-        uint8_t data[] = {0x03, 0x00, 0x01, 0x01, 0xff, 0xff, 0xff};
-        lamp->write_resp(data, sizeof(data));
-    }
-
    private:
     uint16_t conn_handle;
     std::shared_ptr<BLEClientService> service;
-    std::shared_ptr<BLEClientCharacteristic> lamp;
+    std::shared_ptr<LampControl> lamp;
     std::shared_ptr<BLEClientCharacteristic> battery;
 };
 
