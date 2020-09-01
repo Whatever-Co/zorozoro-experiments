@@ -13,121 +13,124 @@ class Cube {
     static uint8_t ServiceUUID[];
     static uint8_t BatteryCharacteristicUUID[];
 
-    static std::shared_ptr<Cube> cubes[];
+   private:
+    static std::shared_ptr<Cube> cubes_[];
 
-    static void new_cube(uint16_t conn_handle) {
+   public:
+    static void NewCube(uint16_t conn_handle) {
         auto cube = std::make_shared<Cube>();
-        cube->setup(conn_handle);
-        Cube::cubes[conn_handle] = cube;
+        cube->Setup(conn_handle);
+        Cube::cubes_[conn_handle] = cube;
     }
 
-    static void delete_cube(uint16_t conn_handle) {
-        Cube::cubes[conn_handle] = nullptr;
+    static void DeleteCube(uint16_t conn_handle) {
+        Cube::cubes_[conn_handle] = nullptr;
     }
 
    private:
-    static void notify_callback(BLEClientCharacteristic *chr, uint8_t *data, uint16_t len) {
+    static void NotifyCallback(BLEClientCharacteristic *chr, uint8_t *data, uint16_t len) {
         Serial.printf("notify_callback: %d, %d\n", len, data[0]);
-        auto cube = Cube::cubes[chr->connHandle()];
-        if (chr == cube->battery_info.get()) {
-            cube->notify_battery(data[0]);
+        auto cube = Cube::cubes_[chr->connHandle()];
+        if (chr == cube->battery_info_.get()) {
+            cube->NotifyBattery(data[0]);
         }
     }
 
    public:
     Cube()
-        : conn_handle(BLE_CONN_HANDLE_INVALID),
-          service(nullptr),
-          lamp_control(nullptr),
-          battery_info(nullptr) {}
+        : conn_handle_(BLE_CONN_HANDLE_INVALID),
+          service_(nullptr),
+          motor_control_(nullptr),
+          lamp_control_(nullptr),
+          battery_info_(nullptr) {}
 
     ~Cube() {
-        disconnect();
+        Disconnect();
     }
 
-    bool setup(uint8_t conn_handle) {
-        this->conn_handle = conn_handle;
+    bool Setup(uint8_t conn_handle) {
+        this->conn_handle_ = conn_handle;
 
         Serial.print("Discovering toio Service ... ");
-        service = std::make_shared<BLEClientService>(ServiceUUID);
-        service->begin();
-        if (!service->discover(conn_handle)) {
+        service_ = std::make_shared<BLEClientService>(ServiceUUID);
+        service_->begin();
+        if (!service_->discover(conn_handle)) {
             Serial.println("No Service Found");
-            disconnect();
+            Disconnect();
             return false;
         }
         Serial.println("Service Found");
 
         Serial.print("Discovering Motor Characteristic ... ");
-        motor_control = std::make_shared<MotorControl>();
-        motor_control->begin();
-        if (!motor_control->discover()) {
+        motor_control_ = std::make_shared<MotorControl>();
+        motor_control_->begin();
+        if (!motor_control_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            disconnect();
+            Disconnect();
             return false;
         }
         Serial.println("Characteristic Found");
 
         Serial.print("Discovering Lamp Characteristic ... ");
-        lamp_control = std::make_shared<LampControl>();
-        lamp_control->begin();
-        if (!lamp_control->discover()) {
+        lamp_control_ = std::make_shared<LampControl>();
+        lamp_control_->begin();
+        if (!lamp_control_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            disconnect();
+            Disconnect();
             return false;
         }
         Serial.println("Characteristic Found");
 
         Serial.print("Discovering Battery Characteristic ... ");
-        battery_info = std::make_shared<BLEClientCharacteristic>(BatteryCharacteristicUUID);
-        battery_info->begin();
-        if (!battery_info->discover()) {
+        battery_info_ = std::make_shared<BLEClientCharacteristic>(BatteryCharacteristicUUID);
+        battery_info_->begin();
+        if (!battery_info_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            disconnect();
+            Disconnect();
             return false;
         }
-        battery_info->setNotifyCallback(&Cube::notify_callback);
-        battery_info->enableNotify();
+        battery_info_->setNotifyCallback(&Cube::NotifyCallback);
+        battery_info_->enableNotify();
         Serial.println("Characteristic Found");
 
-        lamp_control->set_color(255, 255, 255);
-        motor_control->move();
+        lamp_control_->SetColor(255, 255, 255);
+        motor_control_->Move();
         return true;
     }
 
-    void notify_battery(uint8_t value) {
+    void NotifyBattery(uint8_t value) {
         if (value <= 10) {
-            lamp_control->set_blink(255, 0, 0, 300);
+            lamp_control_->SetBlink(255, 0, 0, 300);
         } else if (value <= 20) {
-            lamp_control->set_color(255, 0, 0);
+            lamp_control_->SetColor(255, 0, 0);
         } else if (value <= 50) {
-            lamp_control->set_color(255, 176, 25);
+            lamp_control_->SetColor(255, 176, 25);
         } else {
-            lamp_control->set_color(0, 255, 0);
+            lamp_control_->SetColor(0, 255, 0);
         }
-        // motor_control->move();
     }
 
-    void disconnect() {
-        Serial.printf("disconnect: %d, %p, %p\n", conn_handle, service, lamp_control);
-        if (conn_handle != BLE_CONN_HANDLE_INVALID) {
-            Bluefruit.disconnect(conn_handle);
-            conn_handle = BLE_CONN_HANDLE_INVALID;
+    void Disconnect() {
+        Serial.printf("disconnect: %d, %p, %p\n", conn_handle_, service_, lamp_control_);
+        if (conn_handle_ != BLE_CONN_HANDLE_INVALID) {
+            Bluefruit.disconnect(conn_handle_);
+            conn_handle_ = BLE_CONN_HANDLE_INVALID;
         }
-        service = nullptr;
-        service = nullptr;
-        service = nullptr;
+        service_ = nullptr;
+        motor_control_ = nullptr;
+        lamp_control_ = nullptr;
+        battery_info_ = nullptr;
     }
 
    private:
-    uint16_t conn_handle;
-    std::shared_ptr<BLEClientService> service;
-    std::shared_ptr<MotorControl> motor_control;
-    std::shared_ptr<LampControl> lamp_control;
-    std::shared_ptr<BLEClientCharacteristic> battery_info;
+    uint16_t conn_handle_;
+    std::shared_ptr<BLEClientService> service_;
+    std::shared_ptr<MotorControl> motor_control_;
+    std::shared_ptr<LampControl> lamp_control_;
+    std::shared_ptr<BLEClientCharacteristic> battery_info_;
 };
 
 uint8_t Cube::ServiceUUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x00, 0x01, 0xB2, 0x10};
 uint8_t Cube::BatteryCharacteristicUUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x08, 0x01, 0xB2, 0x10};
 
-std::shared_ptr<Cube> Cube::cubes[BLE_MAX_CONNECTION];
+std::shared_ptr<Cube> Cube::cubes_[BLE_MAX_CONNECTION];

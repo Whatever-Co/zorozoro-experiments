@@ -7,5 +7,32 @@
         null,
         "/Users/hiko/.vscode/extensions/joedevivo.vscode-circuitpython-0.1.2/stubs",
         "/Users/hiko/Library/Application Support/Code/User/globalStorage/joedevivo.vscode-circuitpython/bundle/20200829/adafruit-circuitpython-bundle-py-20200901/lib"
-    ]
+    ],
+    "files.associations": {
+        "*.sc": "glsl",
+        "*.vsc": "glsl",
+        "*.fsc": "glsl",
+        "*.make": "makefile",
+        "*.bazel": "starlark",
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "functional": "cpp",
+        "iterator": "cpp",
+        "memory_resource": "cpp",
+        "optional": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "memory": "cpp",
+        "numeric": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "streambuf": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "ranges": "cpp"
+    }
 }

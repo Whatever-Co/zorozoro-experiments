@@ -48,7 +48,7 @@ void connect_callback(uint16_t conn_handle) {
     Serial.print("Connect Callback, conn_handle: ");
     Serial.println(conn_handle);
 
-    Cube::new_cube(conn_handle);
+    Cube::NewCube(conn_handle);
 
     delay(100);
     Bluefruit.Scanner.start(0);
@@ -56,7 +56,7 @@ void connect_callback(uint16_t conn_handle) {
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
     Serial.printf("Disconnected, %d, reason = 0x%02X\n", conn_handle, reason);
-    Cube::delete_cube(conn_handle);
+    Cube::DeleteCube(conn_handle);
 }
 
 /* Prints a hex list to the Serial Monitor */

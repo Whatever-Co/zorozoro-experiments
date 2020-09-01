@@ -10,12 +10,12 @@ class LampControl : public BLEClientCharacteristic {
    public:
     LampControl() : BLEClientCharacteristic(LampControl::UUID) {}
 
-    void set_color(uint8_t red, uint8_t green, uint8_t blue) {
+    void SetColor(uint8_t red, uint8_t green, uint8_t blue) {
         uint8_t data[] = {0x03, 0x00, 0x01, 0x01, red, green, blue};
         write_resp(data, sizeof(data));
     }
 
-    void set_blink(uint8_t red, uint8_t green, uint8_t blue, uint16_t interval) {
+    void SetBlink(uint8_t red, uint8_t green, uint8_t blue, uint16_t interval) {
         uint8_t d = interval / 10;
         uint8_t data[] = {0x04, 0x00, 0x02,
                           d, 1, 1, red, green, blue,
