@@ -5,10 +5,10 @@
 
 class LampControl : public BLEClientCharacteristic {
    private:
-    static uint8_t CharacteristicUUID[];
+    static uint8_t UUID[];
 
    public:
-    LampControl() : BLEClientCharacteristic(LampControl::CharacteristicUUID) {}
+    LampControl() : BLEClientCharacteristic(LampControl::UUID) {}
 
     void set_color(uint8_t red, uint8_t green, uint8_t blue) {
         uint8_t data[] = {0x03, 0x00, 0x01, 0x01, red, green, blue};
@@ -24,4 +24,4 @@ class LampControl : public BLEClientCharacteristic {
     }
 };
 
-uint8_t LampControl::CharacteristicUUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x03, 0x01, 0xB2, 0x10};
+uint8_t LampControl::UUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x03, 0x01, 0xB2, 0x10};
