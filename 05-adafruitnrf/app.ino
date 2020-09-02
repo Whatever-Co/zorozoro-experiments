@@ -4,19 +4,22 @@
 
 #include "cube.h"
 
+#define MAX_CUBES (10)
+
 void setup() {
     Serial.begin(115200);
     while (!Serial) delay(100);
 
     Serial.println("Start...");
 
-    Bluefruit.configUuid128Count(20);
-    Bluefruit.configAttrTableSize(8192);
-    // Bluefruit.configCentralConn(50, 10, 10, 10);
-    Bluefruit.configCentralBandwidth(BANDWIDTH_HIGH);
-    Bluefruit.begin(0, BLE_MAX_CONNECTION);
+    // Bluefruit.configAttrTableSize(1024 * 12);
+    // Bluefruit.configUuid128Count(12);
+    // Bluefruit.configCentralBandwidth(BANDWIDTH_HIGH);
+    // Bluefruit.configCentralConn(50, 60, 20, 20);
+    // Bluefruit.configPrphConn(BLE_GATT_ATT_MTU_DEFAULT, BLE_GAP_EVENT_LENGTH_DEFAULT * 2, BLE_GATTS_HVN_TX_QUEUE_SIZE_DEFAULT * 2, BLE_GATTC_WRITE_CMD_TX_QUEUE_SIZE_DEFAULT * 2);
+    Bluefruit.begin(0, MAX_CUBES);
 
-    Bluefruit.setConnLedInterval(250);
+    // Bluefruit.setConnLedInterval(250);
 
     Bluefruit.Central.setConnectCallback(connect_callback);
     Bluefruit.Central.setDisconnectCallback(disconnect_callback);
@@ -38,6 +41,7 @@ void loop() {
         Serial.printf("now %d\n", now);
         previousCall = now;
     }
+    Cube::UpdateAll();
 }
 
 void scan_callback(ble_gap_evt_adv_report_t* report) {
@@ -56,12 +60,20 @@ void connect_callback(uint16_t conn_handle) {
     Cube::NewCube(conn_handle);
 
     delay(100);
-    Bluefruit.Scanner.start(0);
+    if (Cube::getNumCubes() < MAX_CUBES) {
+        Bluefruit.Scanner.start(0);
+    }
 }
 
 void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
     Serial.printf("Disconnected, %d, reason = 0x%02X\n", conn_handle, reason);
+
     Cube::DeleteCube(conn_handle);
+
+    delay(100);
+    if (Cube::getNumCubes() < MAX_CUBES) {
+        Bluefruit.Scanner.start(0);
+    }
 }
 
 /* Prints a hex list to the Serial Monitor */
