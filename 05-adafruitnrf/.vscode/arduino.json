@@ -1,7 +1,7 @@
 {
     "sketch": "app.ino",
     "board": "adafruit:nrf52:feather52840",
-    "configuration": "softdevice=s140v6,debug=l0",
+    "configuration": "softdevice=s140v6,debug=l1",
     "port": "/dev/tty.usbmodem14401",
     "output": "./build"
 }

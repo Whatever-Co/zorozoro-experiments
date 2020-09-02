@@ -7,6 +7,7 @@
 
 #include "lamp.h"
 #include "motor.h"
+#include "sensor.h"
 
 class Cube {
    public:
@@ -29,9 +30,10 @@ class Cube {
 
    private:
     static void NotifyCallback(BLEClientCharacteristic *chr, uint8_t *data, uint16_t len) {
-        Serial.printf("notify_callback: %d, %d\n", len, data[0]);
         auto cube = Cube::cubes_[chr->connHandle()];
-        if (chr == cube->battery_info_.get()) {
+        if (chr == cube->sensor_info_.get()) {
+            cube->NotifySensor(data);
+        } else if (chr == cube->battery_info_.get()) {
             cube->NotifyBattery(data[0]);
         }
     }
@@ -40,9 +42,11 @@ class Cube {
     Cube()
         : conn_handle_(BLE_CONN_HANDLE_INVALID),
           service_(nullptr),
+          sensor_info_(nullptr),
           motor_control_(nullptr),
           lamp_control_(nullptr),
-          battery_info_(nullptr) {}
+          battery_info_(nullptr),
+          battery_value_(-1) {}
 
     ~Cube() {
         Disconnect();
@@ -60,6 +64,18 @@ class Cube {
             return false;
         }
         Serial.println("Service Found");
+
+        Serial.print("Discovering Sensor Characteristic ... ");
+        sensor_info_ = std::make_shared<SensorInfo>();
+        sensor_info_->begin();
+        if (!sensor_info_->discover()) {
+            Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
+            Disconnect();
+            return false;
+        }
+        sensor_info_->setNotifyCallback(&Cube::NotifyCallback);
+        sensor_info_->enableNotify();
+        Serial.println("Characteristic Found");
 
         Serial.print("Discovering Motor Characteristic ... ");
         motor_control_ = std::make_shared<MotorControl>();
@@ -94,11 +110,24 @@ class Cube {
         Serial.println("Characteristic Found");
 
         lamp_control_->SetColor(255, 255, 255);
-        motor_control_->Move();
+        // motor_control_->Move();
         return true;
     }
 
+    void NotifySensor(uint8_t data[]) {
+        Serial.print("NotifySensor: [");
+        PrintAddress();
+        Serial.printf("] %d, %d, %d, %d, %d\n", data[0], data[1], data[2], data[3], data[4]);
+    }
+
     void NotifyBattery(uint8_t value) {
+        Serial.print("NotifyBattery: [");
+        PrintAddress();
+        Serial.printf("] %d\n", value);
+        if (value == battery_value_) {
+            return;
+        }
+        battery_value_ = value;
         if (value <= 10) {
             lamp_control_->SetBlink(255, 0, 0, 300);
         } else if (value <= 20) {
@@ -117,17 +146,27 @@ class Cube {
             conn_handle_ = BLE_CONN_HANDLE_INVALID;
         }
         service_ = nullptr;
+        sensor_info_ = nullptr;
         motor_control_ = nullptr;
         lamp_control_ = nullptr;
         battery_info_ = nullptr;
+        battery_value_ = -1;
+    }
+
+    void PrintAddress() {
+        auto addr = Bluefruit.Connection(conn_handle_)->getPeerAddr().addr;
+        Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
     }
 
    private:
     uint16_t conn_handle_;
     std::shared_ptr<BLEClientService> service_;
+    std::shared_ptr<SensorInfo> sensor_info_;
     std::shared_ptr<MotorControl> motor_control_;
     std::shared_ptr<LampControl> lamp_control_;
     std::shared_ptr<BLEClientCharacteristic> battery_info_;
+
+    int battery_value_;
 };
 
 uint8_t Cube::ServiceUUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x00, 0x01, 0xB2, 0x10};

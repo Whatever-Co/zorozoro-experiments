@@ -9,7 +9,7 @@
             "command": "~/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/tools/adafruit-nrfutil/macos/adafruit-nrfutil --verbose dfu serial -pkg ${workspaceFolder}/build/app.ino.zip -p /dev/cu.usbmodem14401 -b 115200 --singlebank",
             "presentation": {
                 "echo": true,
-                "reveal": "silent",
+                "reveal": "always",
                 "focus": true,
                 "panel": "shared",
                 "showReuseMessage": true,
