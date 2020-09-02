@@ -6,9 +6,14 @@
 
 void setup() {
     Serial.begin(115200);
+    while (!Serial) delay(100);
 
     Serial.println("Start...");
 
+    Bluefruit.configUuid128Count(20);
+    Bluefruit.configAttrTableSize(8192);
+    // Bluefruit.configCentralConn(50, 10, 10, 10);
+    Bluefruit.configCentralBandwidth(BANDWIDTH_HIGH);
     Bluefruit.begin(0, BLE_MAX_CONNECTION);
 
     Bluefruit.setConnLedInterval(250);
@@ -29,7 +34,7 @@ static int previousCall = 0;
 
 void loop() {
     int now = millis() / 1000;
-    if (now - previousCall >= 2) {
+    if (now - previousCall >= 1) {
         Serial.printf("now %d\n", now);
         previousCall = now;
     }
