@@ -141,7 +141,7 @@ class Cube {
         Serial.println("Characteristic Found");
 
         lamp_control_->SetColor(255, 255, 255);
-        // motor_control_->Move();
+        motor_control_->Test();
         start = millis();
         return true;
     }
@@ -150,14 +150,12 @@ class Cube {
     uint32_t previous = 0;
 
     void Update() {
-        uint32_t now = (millis() - start);
-        uint32_t d = now / 10000;
+        uint32_t now = millis();
+        uint32_t d = now / 3000;
         if (previous != d) {
             previous = d;
-            // uint8_t value = battery_info_->read8();
-            // if (value > 0) {
-            //     NotifyBattery(value);
-            // }
+            // motor_control_->Rotate((d * 135) & 0xffff);
+            motor_control_->Grid(conn_handle_, (d * 135) & 0xffff);
         }
     }
 
@@ -169,8 +167,8 @@ class Cube {
                 uint16_t center_x = p[0];
                 uint16_t center_y = p[1];
                 uint16_t angle = p[2];
-                PrintAddress();
-                Serial.printf(" x=%d, y=%d, angle=%d\n", center_x, center_y, angle);
+                // PrintAddress();
+                // Serial.printf(" x=%d, y=%d, angle=%d\n", center_x, center_y, angle);
                 break;
             }
             case 0x02:  // Standard ID
