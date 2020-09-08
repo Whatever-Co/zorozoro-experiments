@@ -4,33 +4,91 @@
 #include <bluefruit.h>
 
 #include "cube.h"
+#include "cube_manager.h"
+#include "hoge.h"
 
 //----------------------------------------
+
+#define WAIT_SERIAL_CONNECTION 1
+
+#define CONTROLLER_HOST "192.168.2.1"
+#define CONTROLLER_PORT 1883
 
 #define MAX_CUBES (10)
 
 static EthernetClient client;
 static PubSubClient mq(client);
 
+static const char *requiredTopics[] = {"motor", "lamp"};
+
 //----------------------------------------
 
-void startAcceptNewCube() {
-    if (Cube::getNumCubes() == MAX_CUBES) {
-        Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
-        return;
+void App::Setup() {
+    Serial.begin(115200);
+#ifdef WAIT_SERIAL_CONNECTION
+    while (!Serial) {
+        delay(100);
     }
-    mq.subscribe("newcube");
-    Serial.println("Start accept new cube");
+#endif
+
+    Serial.println("Start...");
+    Bluefruit.begin(0, MAX_CUBES);
+    Bluefruit.Central.setConnectCallback(OnConnect);
+    Bluefruit.Central.setDisconnectCallback(OnDisconnect);
+
+    auto mac = Bluefruit.getAddr().addr;
+    Serial.printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+    Serial.println("Initialize Ethernet with DHCP:");
+    if (Ethernet.begin(mac) == 0) {
+        Serial.println("Failed to configure Ethernet using DHCP");
+        delay(3000);
+        while (true) {
+        }
+    }
+    Serial.print("  DHCP assigned IP ");
+    Serial.println(Ethernet.localIP());
+
+    mq.setServer(CONTROLLER_HOST, CONTROLLER_PORT);
+    mq.setCallback(OnMessage);
+
+    Serial.println("ready...");
 }
 
-void stopAcceptNewCube() {
-    mq.unsubscribe("newcube");
-    Serial.println("Stop accept new cube");
+void App::Loop() {
+    if (!mq.connected()) {
+        Serial.println("Connecting to mqtt server");
+        auto addr = Ethernet.localIP();
+        char addr_str[32];
+        sprintf(addr_str, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
+        while (!mq.connected()) {
+            Serial.print("Attempting MQTT connection...");
+            if (mq.connect(addr_str, "bye", 0, true, "")) {
+                Serial.println("connected");
+                mq.publish("hello", "", true);
+                StartAcceptNewCube();
+            } else {
+                Serial.print("failed, rc=");
+                Serial.print(mq.state());
+                Serial.println(" try again in 5 seconds");
+                delay(5000);
+            }
+        }
+    }
+    mq.loop();
+    delay(10);
 }
 
-//----------------------------------------
+void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length) {
+    auto cube = CubeManager::GetCube(chr->connHandle());
+    char topic[32];
+    sprintf(topic, "%s/battery", cube->GetAddress().c_str());
+    uint8_t value = data[0];
+    mq.publish(topic, &value, 1);
+    Serial.printf("Published: %s,%d\n", topic, value);
+}
 
-void messageReceived(char *topic, byte *payload, unsigned int length) {
+void App::OnMessage(char *topic, byte *payload, unsigned int length) {
     Serial.print("Message received [");
     Serial.print(topic);
     Serial.print("] ");
@@ -43,185 +101,123 @@ void messageReceived(char *topic, byte *payload, unsigned int length) {
 
     String t(topic);
     if (t == "newcube") {
-        char tmp[length + 1];
-        memcpy(tmp, payload, length);
-        tmp[length] = 0;
-        String address(tmp);
-        stopAcceptNewCube();
-        connectToCube(address);
-        startAcceptNewCube();
+        if (accept_new_cube_) {
+            char tmp[length + 1];
+            memcpy(tmp, payload, length);
+            tmp[length] = 0;
+            String address(tmp);
+            StopAcceptNewCube();
+            if (!ConnectToCube(address)) {
+                StartAcceptNewCube();
+            }
+        }
         return;
     }
 
-    // int i = t.indexOf('/');
-    // if (i == -1)
-    // {
-    //     return;
-    // }
-    // String address(t.substring(0, i));
-    // t = t.substring(i + 1);
-    // Serial.printf("address=%s, topic=%s\n", address.c_str(), t.c_str());
-    // if (cubes.count(address) == 0)
-    // {
-    //     return;
-    // }
-    // auto cube = cubes.at(address);
-    // if (t == "motor")
-    // {
-    //     cube->SetMotor(payload, length);
-    // }
-    // else if (t == "lamp")
-    // {
-    //     cube->SetLamp(payload, length);
-    // }
-}
-
-//----------------------------------------
-
-// ble_gap_addr_t convertToAddr(const char *s) {
-//     ble_gap_addr_t addr;
-//     char tmp[3] = {0};
-//     for (int i = 0; i < 6; i++) {
-//         memcpy(tmp, s + (5 - i) * 3, 2);
-//         addr.addr[i] = strtol(tmp, NULL, 16);
-//     }
-//     addr.addr_id_peer = 0;
-//     addr.addr_type = BLE_GAP_ADDR_TYPE_RANDOM_STATIC;
-//     return addr;
-// }
-
-void connectToCube(String address) {
-    Serial.println(address);
-
-    // auto addr = convertToAddr(address.c_str());
-    auto addr = Address::FromString(address);
-    printHexList(addr.addr, BLE_GAP_ADDR_LEN);
-
-    if (Cube::GetCube(addr)) {
-        Serial.printf("Already connected to %s\n", address.c_str());
+    int i = t.indexOf('/');
+    if (i == -1) {
         return;
     }
-
-    Bluefruit.Central.connect(&addr);
-
-    // auto cube = std::make_shared<Cube>();
-    // if (!cube->connect(address, &clientCallback, notifyCallback))
-    // {
-    //     Serial.printf("Connect to %s failed\n", address.c_str());
-    //     return;
-    // }
-
-    // // subscribeTopics(address);
-
-    // char topic[32];
-    // sprintf(topic, "%s/connected", address.c_str());
-    // mq.publish(topic, "", true);
-    // Serial.printf("Published: %s\n", topic);
-
-    // cubes[address] = cube;
+    String address(t.substring(0, i));
+    t = t.substring(i + 1);
+    Serial.printf("address=%s, topic=%s\n", address.c_str(), t.c_str());
+    auto cube = CubeManager::GetCube(address);
+    if (!cube) {
+        return;
+    }
+    if (t == "motor") {
+        // cube->SetMotor(payload, length);
+    } else if (t == "lamp") {
+        cube->SetLamp(payload, length);
+    }
 }
 
-//----------------------------------------
-
-void connect_callback(uint16_t conn_handle) {
-    Serial.println("");
+void App::OnConnect(uint16_t conn_handle) {
     Serial.print("Connect Callback, conn_handle: ");
     Serial.println(conn_handle);
 
-    Cube::NewCube(conn_handle);
+    auto cube = CubeManager::Setup(conn_handle);
+    if (cube) {
+        auto address = cube->GetAddress();
+        SubscribeTopics(address);
+
+        char topic[32];
+        sprintf(topic, "%s/connected", address.c_str());
+        mq.publish(topic, "", true);
+        Serial.printf("Published: %s\n", topic);
+    }
+
+    StartAcceptNewCube();
 }
 
-//----------------------------------------
-
-void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
+void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
     Serial.printf("Disconnected, %d, reason = 0x%02X\n", conn_handle, reason);
 
-    Cube::DeleteCube(conn_handle);
+    auto address = CubeManager::GetAddress(conn_handle);
+
+    UnsubscribeTopics(address);
+
+    char topic[32];
+    sprintf(topic, "%s/disconnected", address.c_str());
+    mq.publish(topic, "", true);
+    Serial.printf("Published: %s\n", topic);
+
+    CubeManager::Cleanup(conn_handle);
+
+    StartAcceptNewCube();
 }
 
-//----------------------------------------
+void App::StartAcceptNewCube() {
+    if (CubeManager::GetNumCubes() == MAX_CUBES) {
+        Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
+        return;
+    }
+    mq.subscribe("newcube");
+    Serial.println("Start accept new cube");
+    accept_new_cube_ = true;
+}
 
-void scan_callback(ble_gap_evt_adv_report_t *report) {
-    Serial.println("\nscan_callback");
-    auto addr = report->peer_addr;
-    printHexList(report->peer_addr.addr, BLE_GAP_ADDR_LEN);
-    Serial.printf("%d, %d\n", addr.addr_id_peer, addr.addr_type);
+void App::StopAcceptNewCube() {
+    accept_new_cube_ = false;
+    mq.unsubscribe("newcube");
+    Serial.println("Stop accept new cube");
+}
 
-    Serial.println("Connecting to Peripheral ... ");
-    Bluefruit.Central.connect(&report->peer_addr);
+bool App::ConnectToCube(String address) {
+    Serial.println(address);
+    if (CubeManager::GetCube(address)) {
+        Serial.printf("Already connected to %s\n", address.c_str());
+        return false;
+    }
+    auto addr = Address::FromString(address);
+    Bluefruit.Central.connect(&addr);
+    return true;
+}
+
+void App::SubscribeTopics(String address) {
+    char topic[32];
+    for (auto t : requiredTopics) {
+        sprintf(topic, "%s/%s", address.c_str(), t);
+        mq.subscribe(topic);
+        Serial.printf("Subscribed: %s\n", topic);
+    }
+}
+
+void App::UnsubscribeTopics(String address) {
+    char topic[32];
+    for (auto t : requiredTopics) {
+        sprintf(topic, "%s/%s", address.c_str(), t);
+        mq.unsubscribe(topic);
+        Serial.printf("Unsubscribed: %s\n", topic);
+    }
 }
 
 //----------------------------------------
 
 void setup() {
-    Serial.begin(115200);
-    while (!Serial)
-        delay(100);
-
-    Serial.println("Start...");
-    Bluefruit.begin(0, MAX_CUBES);
-    Bluefruit.Central.setConnectCallback(connect_callback);
-    Bluefruit.Central.setDisconnectCallback(disconnect_callback);
-
-    auto mac = Bluefruit.getAddr().addr;
-    Serial.printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
-    // start the Ethernet connection:
-    Serial.println("Initialize Ethernet with DHCP:");
-    if (Ethernet.begin(mac) == 0) {
-        Serial.println("Failed to configure Ethernet using DHCP");
-        while (true) {
-            delay(1000);  // do nothing, no point running without Ethernet hardware
-        }
-    }
-    Serial.print("  DHCP assigned IP ");
-    Serial.println(Ethernet.localIP());
-
-    mq.setServer("192.168.2.1", 1883);
-    mq.setCallback(messageReceived);
-
-    // Bluefruit.Scanner.setRxCallback(scan_callback);
-    // Bluefruit.Scanner.restartOnDisconnect(true);
-    // Bluefruit.Scanner.filterUuid(Cube::ServiceUUID);
-    // Bluefruit.Scanner.useActiveScan(true);
-    // Bluefruit.Scanner.start(0);
-
-    Serial.println("ready...");
+    App::Setup();
 }
-
-//----------------------------------------
 
 void loop() {
-    if (!mq.connected()) {
-        Serial.println("Connecting to mqtt server");
-        auto addr = Ethernet.localIP();
-        char addr_str[32];
-        sprintf(addr_str, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
-        while (!mq.connected()) {
-            Serial.print("Attempting MQTT connection...");
-            if (mq.connect(addr_str, "bye", 0, true, "")) {
-                Serial.println("connected");
-                mq.publish("hello", "", true);
-                startAcceptNewCube();
-            } else {
-                Serial.print("failed, rc=");
-                Serial.print(mq.state());
-                Serial.println(" try again in 5 seconds");
-                delay(5000);
-            }
-        }
-    }
-    mq.loop();
-    delay(100);
-}
-
-//----------------------------------------
-
-/* Prints a hex list to the Serial Monitor */
-void printHexList(uint8_t *buffer, uint8_t len) {
-    // print forward order
-    for (int i = 0; i < len; i++) {
-        Serial.printf("%02X-", buffer[i]);
-    }
-    Serial.println();
+    App::Loop();
 }

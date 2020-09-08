@@ -5,7 +5,9 @@
             "includePath": [
                 "/Users/hiko/Library/Arduino15/packages/adafruit/tools/**",
                 "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/**",
-                "/Users/hiko/Documents/Arduino/libraries/**"
+                "/Users/hiko/Documents/Arduino/libraries/**",
+                "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/cores/nRF5/freertos/portable/GCC/nrf52/**",
+                "/Users/hiko/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/cores/nRF5/TinyUSB/**"
             ],
             "forcedInclude": [],
             "macFrameworkPath": [
@@ -15,7 +17,7 @@
             "intelliSenseMode": "clang-x64",
             "compilerPath": "/usr/local/bin/gcc-10",
             "cStandard": "c11",
-            "cppStandard": "c++14"
+            "cppStandard": "c++17"
         }
     ],
     "version": 4

@@ -5,6 +5,7 @@
 
 #include <memory>
 
+#include "hoge.h"
 #include "id.h"
 #include "lamp.h"
 #include "motor.h"
@@ -36,65 +37,6 @@ class Cube {
     static uint8_t ServiceUUID[];
     static uint8_t BatteryCharacteristicUUID[];
 
-   private:
-    static std::shared_ptr<Cube> cubes_[];
-    static size_t num_cubes_;
-
-   public:
-    static void NewCube(uint16_t conn_handle) {
-        auto cube = std::make_shared<Cube>();
-        cube->Setup(conn_handle);
-        Cube::cubes_[conn_handle] = cube;
-        num_cubes_++;
-    }
-
-    static void DeleteCube(uint16_t conn_handle) {
-        Cube::cubes_[conn_handle] = nullptr;
-        num_cubes_--;
-    }
-
-    static void UpdateAll() {
-        for (int i = 0; i < BLE_MAX_CONNECTION; i++) {
-            if (cubes_[i]) {
-                cubes_[i]->Update();
-            }
-        }
-    }
-
-    static std::shared_ptr<Cube> GetCube(ble_gap_addr_t query) {
-        for (int i = 0; i < BLE_MAX_CONNECTION; i++) {
-            auto cube = cubes_[i];
-            if (!cube) continue;
-            auto connection = Bluefruit.Connection(cube->conn_handle_);
-            auto addr = connection->getPeerAddr();
-            bool match = true;
-            for (int i = 0; i < 6 && match; i++) {
-                match = query.addr[i] == addr.addr[i];
-            }
-            if (match) {
-                return cube;
-            }
-        }
-        return nullptr;
-    }
-
-    static size_t getNumCubes() {
-        return num_cubes_;
-    }
-
-   private:
-    static void NotifyCallback(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length) {
-        auto cube = Cube::cubes_[chr->connHandle()];
-        if (chr == cube->id_info_.get()) {
-            cube->NotifyId(data, length);
-        } else if (chr == cube->sensor_info_.get()) {
-            cube->NotifySensor(data);
-        } else if (chr == cube->battery_info_.get()) {
-            cube->NotifyBattery(data[0]);
-        }
-    }
-
-   public:
     Cube()
         : conn_handle_(BLE_CONN_HANDLE_INVALID),
           service_(nullptr),
@@ -106,31 +48,32 @@ class Cube {
           battery_value_(-1) {}
 
     ~Cube() {
-        Disconnect();
+        Serial.println("~Cube...");
     }
 
     bool Setup(uint8_t conn_handle) {
         this->conn_handle_ = conn_handle;
+        auto addr = Bluefruit.Connection(conn_handle)->getPeerAddr();
+        address_ = Address::ToString(addr);
 
         Serial.print("Discovering toio Service ... ");
         service_ = std::make_shared<BLEClientService>(ServiceUUID);
         service_->begin();
         if (!service_->discover(conn_handle)) {
             Serial.println("No Service Found");
-            Disconnect();
             return false;
         }
         Serial.println("Service Found");
 
+        /*
         Serial.print("Discovering ID Characteristic ... ");
         id_info_ = std::make_shared<IdInfo>();
         id_info_->begin();
         if (!id_info_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            Disconnect();
             return false;
         }
-        id_info_->setNotifyCallback(&Cube::NotifyCallback);
+        // id_info_->setNotifyCallback(&App::OnBatteryInfo);
         id_info_->enableNotify();
         Serial.println("Characteristic Found");
 
@@ -151,17 +94,16 @@ class Cube {
         motor_control_->begin();
         if (!motor_control_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            Disconnect();
             return false;
         }
         Serial.println("Characteristic Found");
+        */
 
         Serial.print("Discovering Lamp Characteristic ... ");
         lamp_control_ = std::make_shared<LampControl>();
         lamp_control_->begin();
         if (!lamp_control_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            Disconnect();
             return false;
         }
         Serial.println("Characteristic Found");
@@ -171,111 +113,33 @@ class Cube {
         battery_info_->begin();
         if (!battery_info_->discover()) {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
-            Disconnect();
             return false;
         }
-        battery_info_->setNotifyCallback(&Cube::NotifyCallback);
+        battery_info_->setNotifyCallback(&App::OnBatteryInfo);
         battery_info_->enableNotify();
         Serial.println("Characteristic Found");
 
         lamp_control_->SetColor(255, 255, 255);
         motor_control_->Test();
-        start = millis();
         return true;
     }
 
-    uint32_t start;
-    uint32_t previous = 0;
-
-    void Update() {
-        uint32_t now = millis();
-        uint32_t d = now / 3000;
-        if (previous != d) {
-            previous = d;
-            // motor_control_->Rotate((d * 135) & 0xffff);
-            motor_control_->Grid(conn_handle_, (d * 135) & 0xffff);
-        }
+    void SetLamp(uint8_t *data, size_t length) {
+        lamp_control_->write_resp(data, length);
     }
 
-    void NotifyId(uint8_t *data, uint16_t length) {
-        switch (data[0]) {
-            case 0x01:  // Position ID;
-            {
-                uint16_t *p = (uint16_t *)&data[1];
-                uint16_t center_x = p[0];
-                uint16_t center_y = p[1];
-                uint16_t angle = p[2];
-                // PrintAddress();
-                // Serial.printf(" x=%d, y=%d, angle=%d\n", center_x, center_y, angle);
-                break;
-            }
-            case 0x02:  // Standard ID
-            {
-                uint32_t id = *(uint32_t *)&data[1];
-                uint16_t angle = *(uint16_t *)&data[5];
-                Serial.printf(" id=%d(0x%x), angle=%d%d\n", id, id, angle);
-                break;
-            }
-            case 0x03:  // Position ID missed
-            {
-                PrintAddress();
-                Serial.println(" Position ID missed");
-                break;
-            }
-            case 0x04:  // Standard ID missed
-            {
-                PrintAddress();
-                Serial.println(" Standard ID missed");
-                break;
-            }
-        }
-    }
+    uint16_t GetConnection() { return conn_handle_; }
 
-    void NotifySensor(uint8_t *data) {
-        PrintAddress();
-        Serial.printf(" Sensor: %d, %d, %d, %d, %d\n", data[0], data[1], data[2], data[3], data[4]);
-    }
-
-    void NotifyBattery(uint8_t value) {
-        PrintAddress();
-        Serial.printf(" Battery: %d\n", value);
-        if (value == battery_value_) {
-            return;
-        }
-        battery_value_ = value;
-        if (value <= 10) {
-            lamp_control_->SetBlink(255, 0, 0, 300);
-        } else if (value <= 20) {
-            lamp_control_->SetColor(255, 0, 0);
-        } else if (value <= 50) {
-            lamp_control_->SetColor(255, 176, 25);
-        } else {
-            lamp_control_->SetColor(0, 255, 0);
-        }
-    }
-
-    void Disconnect() {
-        Serial.printf("disconnect: %d, %p, %p\n", conn_handle_, service_, lamp_control_);
-        if (conn_handle_ != BLE_CONN_HANDLE_INVALID) {
-            Bluefruit.disconnect(conn_handle_);
-            conn_handle_ = BLE_CONN_HANDLE_INVALID;
-        }
-        service_ = nullptr;
-        id_info_ = nullptr;
-        sensor_info_ = nullptr;
-        motor_control_ = nullptr;
-        lamp_control_ = nullptr;
-        battery_info_ = nullptr;
-        battery_value_ = -1;
-    }
+    String GetAddress() { return address_; }
 
     void PrintAddress() {
         auto addr = Bluefruit.Connection(conn_handle_)->getPeerAddr().addr;
-        Serial.printf("[%02X:%02X:%02X:%02X:%02X:%02X]", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+        Serial.printf("[%02X:%02X:%02X:%02X:%02X:%02X]", addr[5], addr[4], addr[3], addr[2], addr[1], addr[0]);
     }
 
    private:
     uint16_t conn_handle_;
+    String address_;
     std::shared_ptr<BLEClientService> service_;
     std::shared_ptr<IdInfo> id_info_;
     std::shared_ptr<SensorInfo> sensor_info_;
@@ -288,6 +152,3 @@ class Cube {
 
 uint8_t Cube::ServiceUUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x00, 0x01, 0xB2, 0x10};
 uint8_t Cube::BatteryCharacteristicUUID[] = {0xAE, 0xBB, 0xD7, 0xFC, 0x3E, 0xCF, 0x08, 0x95, 0x71, 0x45, 0x3B, 0x5B, 0x08, 0x01, 0xB2, 0x10};
-
-std::shared_ptr<Cube> Cube::cubes_[BLE_MAX_CONNECTION];
-size_t Cube::num_cubes_ = 0;
