@@ -9,7 +9,7 @@
 
 const char *ssid = "WHEREVER";
 const char *password = "0364276022";
-const char *controllerHost = "10.0.0.123";
+const char *controllerHost = "10.0.0.36";
 // const char *ssid = "NETGEAR85";
 // const char *password = "09077518842";
 // const char *controllerHost = "10.77.1.141";
