@@ -5,6 +5,7 @@
 
 #include <map>
 #include <memory>
+#include <vector>
 
 #include "cube.h"
 
@@ -33,7 +34,8 @@ class CubeManager {
     }
 
     static std::shared_ptr<Cube> GetCube(uint16_t conn_handle) {
-        for (const auto& [address, cube] : cubes_) {
+        for (const auto& x : cubes_) {
+            auto& cube = x.second;
             if (cube->GetConnection() == conn_handle) {
                 return cube;
             }
@@ -50,6 +52,14 @@ class CubeManager {
 
     static size_t GetNumCubes() {
         return cubes_.size();
+    }
+
+    static std::vector<String> GetAddresses() {
+        std::vector<String> addresses;
+        for (const auto& x : cubes_) {
+            addresses.push_back(x.first);
+        }
+        return addresses;
     }
 
    private:

@@ -3,5 +3,5 @@
     "board": "adafruit:nrf52:feather52840",
     "configuration": "softdevice=s140v6,debug=l1",
     "output": "./build",
-    "port": "/dev/tty.usbmodem5301"
+    "port": "/dev/tty.usbmodem53201"
 }

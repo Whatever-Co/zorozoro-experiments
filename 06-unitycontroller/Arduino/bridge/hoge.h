@@ -1,14 +1,6 @@
 #pragma once
 
-// #include <Ethernet2.h>
-// #include <PubSubClient.h>
-// #include <SPI.h>
 #include <bluefruit.h>
-
-// #include "cube.h"
-// #include "cube_manager.h"
-
-//----------------------------------------
 
 class App {
    public:
@@ -30,7 +22,6 @@ class App {
     static void SubscribeTopics(String address);
     static void UnsubscribeTopics(String address);
 
+    static String ip_address_;
     static bool accept_new_cube_;
 };
-
-bool App::accept_new_cube_ = false;

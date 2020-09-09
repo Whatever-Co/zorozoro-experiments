@@ -23,6 +23,11 @@ static const char *requiredTopics[] = {"motor", "lamp"};
 
 //----------------------------------------
 
+String App::ip_address_;
+bool App::accept_new_cube_ = false;
+
+//----------------------------------------
+
 void App::Setup() {
     Serial.begin(115200);
 #ifdef WAIT_SERIAL_CONNECTION
@@ -36,6 +41,7 @@ void App::Setup() {
     Bluefruit.Central.setConnectCallback(OnConnect);
     Bluefruit.Central.setDisconnectCallback(OnDisconnect);
 
+    // Use bluetooth address as Ethernet MAC address...
     auto mac = Bluefruit.getAddr().addr;
     Serial.printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
@@ -47,7 +53,12 @@ void App::Setup() {
         }
     }
     Serial.print("  DHCP assigned IP ");
-    Serial.println(Ethernet.localIP());
+    // Serial.println(Ethernet.localIP());
+    auto addr = Ethernet.localIP();
+    char addr_str[32];
+    sprintf(addr_str, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
+    ip_address_ = String(addr_str);
+    Serial.println(ip_address_);
 
     mq.setServer(CONTROLLER_HOST, CONTROLLER_PORT);
     mq.setCallback(OnMessage);
@@ -58,25 +69,24 @@ void App::Setup() {
 void App::Loop() {
     if (!mq.connected()) {
         Serial.println("Connecting to mqtt server");
-        auto addr = Ethernet.localIP();
-        char addr_str[32];
-        sprintf(addr_str, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
         while (!mq.connected()) {
             Serial.print("Attempting MQTT connection...");
-            if (mq.connect(addr_str, "bye", 0, true, "")) {
+            if (mq.connect(ip_address_.c_str())) {
                 Serial.println("connected");
-                mq.publish("hello", "", true);
                 StartAcceptNewCube();
+                for (auto &addr : CubeManager::GetAddresses()) {
+                    SubscribeTopics(addr);
+                }
             } else {
                 Serial.print("failed, rc=");
                 Serial.print(mq.state());
                 Serial.println(" try again in 5 seconds");
-                delay(5000);
+                delay(3000);
             }
         }
     }
     mq.loop();
-    delay(10);
+    delay(100);
 }
 
 void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length) {
@@ -100,6 +110,13 @@ void App::OnMessage(char *topic, byte *payload, unsigned int length) {
     Serial.println();
 
     String t(topic);
+    int i = t.indexOf('/');
+    if (i == -1) {
+        return;
+    }
+    String address(t.substring(0, i));
+    t = t.substring(i + 1);
+    Serial.printf("address=%s, topic=%s\n", address.c_str(), t.c_str());
     if (t == "newcube") {
         if (accept_new_cube_) {
             char tmp[length + 1];
@@ -113,14 +130,6 @@ void App::OnMessage(char *topic, byte *payload, unsigned int length) {
         }
         return;
     }
-
-    int i = t.indexOf('/');
-    if (i == -1) {
-        return;
-    }
-    String address(t.substring(0, i));
-    t = t.substring(i + 1);
-    Serial.printf("address=%s, topic=%s\n", address.c_str(), t.c_str());
     auto cube = CubeManager::GetCube(address);
     if (!cube) {
         return;
@@ -128,7 +137,7 @@ void App::OnMessage(char *topic, byte *payload, unsigned int length) {
     if (t == "motor") {
         // cube->SetMotor(payload, length);
     } else if (t == "lamp") {
-        cube->SetLamp(payload, length);
+        // cube->SetLamp(payload, length);
     }
 }
 
@@ -172,14 +181,18 @@ void App::StartAcceptNewCube() {
         Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
         return;
     }
-    mq.subscribe("newcube");
+    auto topic = ip_address_ + "/newcube";
+    mq.subscribe(topic.c_str());
+    topic = ip_address_ + "/available";
+    mq.publish(topic.c_str(), "");
     Serial.println("Start accept new cube");
     accept_new_cube_ = true;
 }
 
 void App::StopAcceptNewCube() {
     accept_new_cube_ = false;
-    mq.unsubscribe("newcube");
+    auto topic = ip_address_ + "/newcube";
+    mq.unsubscribe(topic.c_str());
     Serial.println("Stop accept new cube");
 }
 

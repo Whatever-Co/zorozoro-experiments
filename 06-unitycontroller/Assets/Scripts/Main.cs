@@ -5,6 +5,8 @@ using MQTTnet.Client.Connecting;
 using MQTTnet.Client.Disconnecting;
 using MQTTnet.Client.Options;
 using MQTTnet.Client.Receiving;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +21,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
 
     private CubeManager cubeManager;
+    private HashSet<string> availableBridegs;
 
     private Server server;
     private IMqttClientOptions options;
@@ -40,6 +43,8 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         cubeManager = GetComponent<CubeManager>();
         cubeManager.Publisher = client;
 
+        availableBridegs = new HashSet<string>();
+
         options = new MqttClientOptionsBuilder()
             .WithClientId("controller")
             .WithTcpServer("localhost")
@@ -54,7 +59,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         logger.ZLogDebug("Connected");
         return Task.Run(async () =>
         {
-            var topics = new[] { "+/connected", "+/disconnected", "+/position", "+/button", "+/battery" };
+            var topics = new[] { "newcube", "+/available", "+/connected", "+/disconnected", "+/position", "+/button", "+/battery" };
             foreach (var t in topics)
             {
                 await client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(t).Build());
@@ -89,10 +94,32 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
             var m = e.ApplicationMessage;
             var payload = m.Payload != null ? Encoding.UTF8.GetString(m.Payload) : "";
             logger.ZLogDebug($"Message received: Client = {e.ClientId}, Topic = {m.Topic}, Payload = {payload}");
+            switch (m.Topic)
+            {
+                case "newcube":
+                    var bridge = availableBridegs.FirstOrDefault();
+                    logger.ZLogDebug(bridge);
+                    if (!string.IsNullOrEmpty(bridge))
+                    {
+                        availableBridegs.Remove(bridge);
+                        var message = new MqttApplicationMessageBuilder()
+                            .WithTopic($"{bridge}/newcube")
+                            .WithPayload(m.Payload)
+                            .WithAtLeastOnceQoS()
+                            .Build();
+                        client.PublishAsync(message, CancellationToken.None);
+                    }
+                    return;
+            }
             var t = m.Topic.Split('/');
             var address = t[0];
             switch (t[1])
             {
+                case "available":
+                    logger.ZLogTrace("available cliente: {0}", address);
+                    availableBridegs.Add(address);
+                    break;
+
                 case "connected":
                     var cube = cubeManager.AddOrGetCube(address);
                     cube.SetLamp(Color.white);
