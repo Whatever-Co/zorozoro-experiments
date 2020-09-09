@@ -9,7 +9,7 @@
 
 //----------------------------------------
 
-#define WAIT_SERIAL_CONNECTION 1
+// #define WAIT_SERIAL_CONNECTION 1
 
 #define CONTROLLER_HOST "192.168.2.1"
 #define CONTROLLER_PORT 1883
@@ -60,9 +60,6 @@ void App::Setup() {
     ip_address_ = String(addr_str);
     Serial.println(ip_address_);
 
-    // mq.setServer(CONTROLLER_HOST, CONTROLLER_PORT);
-    // mq.setCallback(OnMessage);
-
     mqtt.begin(CONTROLLER_HOST, ethernet);
     mqtt.onMessageAdvanced(OnMessage);
 
@@ -73,16 +70,6 @@ void App::Loop() {
     mqtt.loop();
 
     if (!mqtt.connected()) {
-        // Serial.println("Connecting to mqtt server");
-        // while (!mqtt.connect(ip_address_.c_str())) {
-        //     Serial.print(".");
-        //     delay(1000);
-        // }
-        // Serial.println("connected!");
-        // StartAcceptNewCube();
-        // for (auto &addr : CubeManager::GetAddresses()) {
-        //     SubscribeTopics(addr);
-        // }
         while (!mqtt.connected()) {
             Serial.print("Attempting MQTT connection...");
             ethernet.stop();
@@ -93,9 +80,7 @@ void App::Loop() {
                     SubscribeTopics(addr);
                 }
             } else {
-                Serial.print("failed,");
-                // Serial.print(mqtt.state());
-                Serial.println(" try again in 5 seconds");
+                Serial.print("failed, try again in 3 seconds");
                 delay(3000);
             }
         }
@@ -153,7 +138,7 @@ void App::OnMessage(MQTTClient *client, char topic[], char payload[], int length
         return;
     }
     if (t == "motor") {
-        // cube->SetMotor((uint8_t *)payload, length);
+        cube->SetMotor((uint8_t *)payload, length);
     } else if (t == "lamp") {
         cube->SetLamp((uint8_t *)payload, length);
     }

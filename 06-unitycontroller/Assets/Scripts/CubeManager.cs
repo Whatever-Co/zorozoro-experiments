@@ -40,16 +40,11 @@ public class CubeManager : MonoBehaviour
     }
 
 
-    int angle = 0;
-
-
-    public void SetMotorAll()
+    public void SetMotorAll(int angle)
     {
-        var a = Random.Range(0, 8) * 45;
         foreach (var (address, cube) in cubes)
         {
-            cube.SetMotor(a);
-            angle += 90;
+            cube.SetMotor(angle);
         }
     }
 

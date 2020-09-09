@@ -170,7 +170,6 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     }
 
 
-
     static Color[] Colors = {
         new Color(1, 1, 0, 1),
         new Color(1, 0, 1, 1),
@@ -178,10 +177,18 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     };
     static int count = 0;
 
+    public void RandomColor()
+    {
+        cubeManager.SetLampAll(Colors[count++ % Colors.Length]);
+    }
+
+
+    int angle = 0;
+
     public void RandomRotate()
     {
-        // cubeManager.SetMotorAll();
-        cubeManager.SetLampAll(Colors[count++ % Colors.Length]);
+        cubeManager.SetMotorAll(angle);
+        angle = (angle + 135) % 360;
     }
 
 

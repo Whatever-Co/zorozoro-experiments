@@ -88,6 +88,7 @@ class Cube {
         // sensor_info_->setNotifyCallback(&Cube::NotifyCallback);
         // sensor_info_->enableNotify();
         // Serial.println("Characteristic Found");
+        */
 
         Serial.print("Discovering Motor Characteristic ... ");
         motor_control_ = std::make_shared<MotorControl>();
@@ -97,7 +98,6 @@ class Cube {
             return false;
         }
         Serial.println("Characteristic Found");
-        */
 
         Serial.print("Discovering Lamp Characteristic ... ");
         lamp_control_ = std::make_shared<LampControl>();
@@ -126,6 +126,10 @@ class Cube {
 
     void SetLamp(uint8_t *data, size_t length) {
         lamp_control_->write_resp(data, length);
+    }
+
+    void SetMotor(uint8_t *data, size_t length) {
+        motor_control_->write(data, length);
     }
 
     uint16_t GetConnection() { return conn_handle_; }
