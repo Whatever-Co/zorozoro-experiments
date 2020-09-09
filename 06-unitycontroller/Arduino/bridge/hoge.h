@@ -10,7 +10,7 @@ class App {
     static void OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length);
 
    private:
-    static void OnMessage(char *topic, byte *payload, unsigned int length);
+    static void OnMessage(MQTTClient *client, char topic[], char payload[], int length);
     static void OnConnect(uint16_t conn_handle);
     static void OnDisconnect(uint16_t conn_handle, uint8_t reason);
 

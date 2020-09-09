@@ -1,5 +1,5 @@
 #include <Ethernet2.h>
-#include <PubSubClient.h>
+#include <MQTT.h>
 #include <SPI.h>
 #include <bluefruit.h>
 
@@ -16,8 +16,8 @@
 
 #define MAX_CUBES (10)
 
-static EthernetClient client;
-static PubSubClient mq(client);
+static EthernetClient ethernet;
+static MQTTClient mqtt;
 
 static const char *requiredTopics[] = {"motor", "lamp"};
 
@@ -60,32 +60,47 @@ void App::Setup() {
     ip_address_ = String(addr_str);
     Serial.println(ip_address_);
 
-    mq.setServer(CONTROLLER_HOST, CONTROLLER_PORT);
-    mq.setCallback(OnMessage);
+    // mq.setServer(CONTROLLER_HOST, CONTROLLER_PORT);
+    // mq.setCallback(OnMessage);
+
+    mqtt.begin(CONTROLLER_HOST, ethernet);
+    mqtt.onMessageAdvanced(OnMessage);
 
     Serial.println("ready...");
 }
 
 void App::Loop() {
-    if (!mq.connected()) {
-        Serial.println("Connecting to mqtt server");
-        while (!mq.connected()) {
+    mqtt.loop();
+
+    if (!mqtt.connected()) {
+        // Serial.println("Connecting to mqtt server");
+        // while (!mqtt.connect(ip_address_.c_str())) {
+        //     Serial.print(".");
+        //     delay(1000);
+        // }
+        // Serial.println("connected!");
+        // StartAcceptNewCube();
+        // for (auto &addr : CubeManager::GetAddresses()) {
+        //     SubscribeTopics(addr);
+        // }
+        while (!mqtt.connected()) {
             Serial.print("Attempting MQTT connection...");
-            if (mq.connect(ip_address_.c_str())) {
+            ethernet.stop();
+            if (mqtt.connect(ip_address_.c_str())) {
                 Serial.println("connected");
                 StartAcceptNewCube();
                 for (auto &addr : CubeManager::GetAddresses()) {
                     SubscribeTopics(addr);
                 }
             } else {
-                Serial.print("failed, rc=");
-                Serial.print(mq.state());
+                Serial.print("failed,");
+                // Serial.print(mqtt.state());
                 Serial.println(" try again in 5 seconds");
                 delay(3000);
             }
         }
     }
-    mq.loop();
+
     delay(100);
 }
 
@@ -93,21 +108,24 @@ void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t le
     auto cube = CubeManager::GetCube(chr->connHandle());
     char topic[32];
     sprintf(topic, "%s/battery", cube->GetAddress().c_str());
-    uint8_t value = data[0];
-    mq.publish(topic, &value, 1);
+    char value = data[0];
+    mqtt.publish(topic, &value, 1);
     Serial.printf("Published: %s,%d\n", topic, value);
 }
 
-void App::OnMessage(char *topic, byte *payload, unsigned int length) {
+void App::OnMessage(MQTTClient *client, char topic[], char payload[], int length) {
     Serial.print("Message received [");
     Serial.print(topic);
     Serial.print("] ");
-    if (length < 128) {
+    if (length <= 64) {
         for (int i = 0; i < length; i++) {
             Serial.printf("%02X ", (char)payload[i]);
         }
+        Serial.println();
+    } else {
+        Serial.printf("\nPayload is too long: %d bytes... (or something wrong...?\n", length);
+        return;
     }
-    Serial.println();
 
     String t(topic);
     int i = t.indexOf('/');
@@ -135,9 +153,9 @@ void App::OnMessage(char *topic, byte *payload, unsigned int length) {
         return;
     }
     if (t == "motor") {
-        // cube->SetMotor(payload, length);
+        // cube->SetMotor((uint8_t *)payload, length);
     } else if (t == "lamp") {
-        // cube->SetLamp(payload, length);
+        cube->SetLamp((uint8_t *)payload, length);
     }
 }
 
@@ -152,7 +170,7 @@ void App::OnConnect(uint16_t conn_handle) {
 
         char topic[32];
         sprintf(topic, "%s/connected", address.c_str());
-        mq.publish(topic, "", true);
+        mqtt.publish(topic, "", false, 1);
         Serial.printf("Published: %s\n", topic);
     }
 
@@ -166,9 +184,10 @@ void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
 
     UnsubscribeTopics(address);
 
-    char topic[32];
-    sprintf(topic, "%s/disconnected", address.c_str());
-    mq.publish(topic, "", true);
+    // char topic[32];
+    // sprintf(topic, "%s/disconnected", address.c_str());
+    String topic = address + "/disconnected";
+    mqtt.publish(topic, "", false, 1);
     Serial.printf("Published: %s\n", topic);
 
     CubeManager::Cleanup(conn_handle);
@@ -182,9 +201,9 @@ void App::StartAcceptNewCube() {
         return;
     }
     auto topic = ip_address_ + "/newcube";
-    mq.subscribe(topic.c_str());
+    mqtt.subscribe(topic);
     topic = ip_address_ + "/available";
-    mq.publish(topic.c_str(), "");
+    mqtt.publish(topic, "", false, 1);
     Serial.println("Start accept new cube");
     accept_new_cube_ = true;
 }
@@ -192,7 +211,7 @@ void App::StartAcceptNewCube() {
 void App::StopAcceptNewCube() {
     accept_new_cube_ = false;
     auto topic = ip_address_ + "/newcube";
-    mq.unsubscribe(topic.c_str());
+    mqtt.unsubscribe(topic);
     Serial.println("Stop accept new cube");
 }
 
@@ -211,7 +230,7 @@ void App::SubscribeTopics(String address) {
     char topic[32];
     for (auto t : requiredTopics) {
         sprintf(topic, "%s/%s", address.c_str(), t);
-        mq.subscribe(topic);
+        mqtt.subscribe(topic);
         Serial.printf("Subscribed: %s\n", topic);
     }
 }
@@ -220,7 +239,7 @@ void App::UnsubscribeTopics(String address) {
     char topic[32];
     for (auto t : requiredTopics) {
         sprintf(topic, "%s/%s", address.c_str(), t);
-        mq.unsubscribe(topic);
+        mqtt.unsubscribe(topic);
         Serial.printf("Unsubscribed: %s\n", topic);
     }
 }

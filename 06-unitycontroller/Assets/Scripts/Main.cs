@@ -170,9 +170,18 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     }
 
 
+
+    static Color[] Colors = {
+        new Color(1, 1, 0, 1),
+        new Color(1, 0, 1, 1),
+        new Color(0, 1, 1, 1)
+    };
+    static int count = 0;
+
     public void RandomRotate()
     {
-        cubeManager.SetMotorAll();
+        // cubeManager.SetMotorAll();
+        cubeManager.SetLampAll(Colors[count++ % Colors.Length]);
     }
 
 
