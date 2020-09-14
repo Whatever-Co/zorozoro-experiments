@@ -546,7 +546,7 @@ MonoBehaviour:
   target: {fileID: 19936328}
   xSpeed: 200
   ySpeed: 20
-  zoomSpeed: 1
+  zoomSpeed: 0.1
   yMinLimit: 5
   yMaxLimit: 90
   distanceMin: 1
