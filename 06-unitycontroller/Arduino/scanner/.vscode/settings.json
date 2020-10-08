@@ -1,0 +1,14 @@
+{
+    "editor.formatOnType": true,
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "files.associations": {
+        "*.sc": "glsl",
+        "*.vsc": "glsl",
+        "*.fsc": "glsl",
+        "*.make": "makefile",
+        "*.bazel": "starlark",
+        "string": "cpp"
+    },
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, IndentWidth: 4, ColumnLimit: 0}"
+}
