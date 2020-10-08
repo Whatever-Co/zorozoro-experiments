@@ -22,6 +22,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     private CubeManager cubeManager;
     private HashSet<string> availableBridegs;
+    private HashSet<string> connectingCubes;
 
     private Server server;
     private IMqttClientOptions options;
@@ -44,6 +45,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         cubeManager.Publisher = client;
 
         availableBridegs = new HashSet<string>();
+        connectingCubes = new HashSet<string>();
 
         options = new MqttClientOptionsBuilder()
             .WithClientId("controller")
@@ -97,6 +99,10 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
             switch (m.Topic)
             {
                 case "newcube":
+                    // if (connectingCubes.Contains(payload))
+                    // {
+                    //     return;
+                    // }
                     var bridge = availableBridegs.FirstOrDefault();
                     logger.ZLogDebug(bridge);
                     if (!string.IsNullOrEmpty(bridge))
@@ -108,6 +114,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                             .WithAtLeastOnceQoS()
                             .Build();
                         client.PublishAsync(message, CancellationToken.None);
+                        connectingCubes.Add(payload);
                     }
                     return;
             }
@@ -121,11 +128,13 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                     break;
 
                 case "connected":
+                    connectingCubes.Remove(address);
                     var cube = cubeManager.AddOrGetCube(address);
                     cube.SetLamp(Color.white);
                     break;
 
                 case "disconnected":
+                    connectingCubes.Remove(address);
                     break;
 
                 case "position":
@@ -157,9 +166,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // var color = new Color(Random.value, Random.value, Random.value);
-            // logger.ZLogDebug(color.ToString());
-            // cubeManager.SetLampAll(color);
+            RandomRotate();
         }
     }
 
