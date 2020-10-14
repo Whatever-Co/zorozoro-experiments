@@ -89,6 +89,22 @@ void App::Loop() {
     delay(100);
 }
 
+void App::OnMotor(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length) {
+    Serial.print("OnMotor: ");
+    for (int i = 0; i < length; i++) {
+        Serial.printf("%02X ", (char)data[i]);
+    }
+    Serial.println();
+}
+
+void App::OnIdInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length) {
+    auto cube = CubeManager::GetCube(chr->connHandle());
+    char topic[32];
+    sprintf(topic, "%s/position", cube->GetAddress().c_str());
+    mqtt.publish(topic, (char *)data, length);
+    // Serial.printf("Published: %dbytes\n", length);
+}
+
 void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length) {
     auto cube = CubeManager::GetCube(chr->connHandle());
     char topic[32];
@@ -102,7 +118,7 @@ void App::OnMessage(MQTTClient *client, char topic[], char payload[], int length
     Serial.print("Message received [");
     Serial.print(topic);
     Serial.print("] ");
-    if (length <= 64) {
+    if (length <= 32) {
         for (int i = 0; i < length; i++) {
             Serial.printf("%02X ", (char)payload[i]);
         }

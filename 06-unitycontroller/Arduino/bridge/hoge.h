@@ -7,6 +7,8 @@ class App {
     static void Setup();
     static void Loop();
 
+    static void OnIdInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length);
+    static void OnMotor(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length);
     static void OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length);
 
    private:
