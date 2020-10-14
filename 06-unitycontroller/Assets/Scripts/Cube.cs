@@ -2,12 +2,18 @@ using Microsoft.Extensions.Logging;
 using MQTTnet;
 using System.IO;
 using System.Threading;
+using System.Collections;
 using UnityEngine;
 using ZLogger;
 
 
 public class Cube : MonoBehaviour
 {
+
+    public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
+    public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
+    public static readonly Vector2 MAT_CENTER = (MAT_MIN + MAT_MAX) / 2;
+
 
     public string Address { get; private set; }
     public bool IsConnected { get; private set; }
@@ -18,6 +24,8 @@ public class Cube : MonoBehaviour
 
     // private Vector3 currentPosition;
     // private Quaternion currentRotation;
+
+    private Vector2 currentMatPosition;
 
 
 
@@ -67,6 +75,81 @@ public class Cube : MonoBehaviour
         }
     }
 
+    public static readonly float DotPerM = 411f / 0.560f; // 411/0.560 dot/m
+
+
+    float radius;
+    byte speed;
+    Coroutine coroutine = null;
+
+    public void StartGoAround()
+    {
+        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), 50, 90);
+        speed = (byte)Mathf.FloorToInt(radius / 5f);
+        radius = speed * 5;
+        coroutine = StartCoroutine(_GoAround());
+    }
+
+
+    public void StopGoAround()
+    {
+        if (coroutine != null)
+        {
+            StopCoroutine(coroutine);
+        }
+    }
+
+    IEnumerator _GoAround()
+    {
+        while (true)
+        {
+            // const float DIST = 100f;
+            const float A = 60f;
+            // L = 2 PI R
+            // var dist = 2 * Mathf.PI * radius * A / 360f;
+            // float A = DIST / (2 * Mathf.PI * radius) * 360;
+            // Debug.LogWarning($"radius={radius}, DIST={DIST}, A={A}");
+            try
+            {
+                using (var stream = new MemoryStream())
+                using (var writer = new BinaryWriter(stream))
+                {
+                    byte[] data = { 0x04, 0x66, 100, 1, speed, 0, 0x00, 0 };
+                    writer.Write(data);
+
+                    var p = currentMatPosition - MAT_CENTER;
+                    var startAngle = Mathf.Atan2(p.y, p.x);
+                    Debug.LogWarning($"a={startAngle * Mathf.Rad2Deg}");
+                    // var radius = Vector2.Distance(currentMatPosition, MAT_CENTER);
+                    for (int i = 1; i <= 2; i++)
+                    {
+                        var a = startAngle + i / 2f * A * Mathf.Deg2Rad;
+                        ushort x = (ushort)(Mathf.Cos(a) * radius + MAT_CENTER.x);
+                        ushort y = (ushort)(Mathf.Sin(a) * radius + MAT_CENTER.y);
+                        Debug.LogWarning($"a={a * Mathf.Rad2Deg}, x={x}, y={y}");
+                        writer.Write(x);
+                        writer.Write(y);
+                        writer.Write((ushort)(0x05 << 13));
+                    }
+
+                    // Debug.LogWarning(stream.Length);
+                    var message = new MqttApplicationMessageBuilder()
+                        .WithTopic(Address + "/motor")
+                        .WithPayload(stream.ToArray())
+                        .WithAtLeastOnceQoS()
+                        .Build();
+                    publisher.PublishAsync(message, CancellationToken.None);
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+            }
+
+            yield return new WaitForSeconds(2f);
+        }
+    }
+
 
     public void SetPosition(byte[] data)
     {
@@ -79,6 +162,8 @@ public class Cube : MonoBehaviour
                 case 0x01: // Position ID
                     var centerX = reader.ReadUInt16();
                     var centerY = reader.ReadUInt16();
+                    currentMatPosition.x = centerX;
+                    currentMatPosition.y = centerY;
                     var centerRotation = reader.ReadUInt16();
                     // var sensorX = reader.ReadUInt16();
                     // var sensorY = reader.ReadUInt16();

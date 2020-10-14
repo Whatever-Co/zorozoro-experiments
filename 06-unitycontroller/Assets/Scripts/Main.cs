@@ -199,6 +199,11 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     }
 
 
+    public void GoAround()
+    {
+        cubeManager.GoAround();
+    }
+
     async void OnApplicationQuit()
     {
         await client.DisconnectAsync();

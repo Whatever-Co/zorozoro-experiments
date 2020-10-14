@@ -74,4 +74,13 @@ public class CubeManager : MonoBehaviour
         cube.SetBattery(value);
     }
 
+
+    public void GoAround()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.StartGoAround();
+        }
+    }
+
 }
