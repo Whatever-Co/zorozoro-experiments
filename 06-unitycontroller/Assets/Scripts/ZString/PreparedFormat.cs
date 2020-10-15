@@ -44,13 +44,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -120,13 +120,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -211,13 +211,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -317,13 +317,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -438,13 +438,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -574,13 +574,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -725,13 +725,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -891,13 +891,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -1072,13 +1072,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -1268,13 +1268,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -1479,13 +1479,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -1705,13 +1705,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -1946,13 +1946,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -2202,13 +2202,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -2473,13 +2473,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -2759,13 +2759,13 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15, T16 arg16)
             where TBufferWriter : IBufferWriter<char>
         {
-            var strSpan = FormatString.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
                     var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
+                    strSpan.TryCopyTo(span);
                     sb.Advance(item.Count);
                 }
                 else
@@ -3026,7 +3026,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3042,7 +3041,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1)
@@ -3062,14 +3060,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3104,7 +3103,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3120,7 +3118,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2)
@@ -3140,14 +3137,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3197,7 +3195,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3213,7 +3210,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3)
@@ -3233,14 +3229,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3305,7 +3302,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3321,7 +3317,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -3341,14 +3336,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3428,7 +3424,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3444,7 +3439,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -3464,14 +3458,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3566,7 +3561,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3582,7 +3576,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -3602,14 +3595,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3719,7 +3713,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3735,7 +3728,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -3755,14 +3747,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -3887,7 +3880,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -3903,7 +3895,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -3923,14 +3914,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -4070,7 +4062,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -4086,7 +4077,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -4106,14 +4096,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -4268,7 +4259,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -4284,7 +4274,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -4304,14 +4293,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -4481,7 +4471,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -4497,7 +4486,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
@@ -4517,14 +4505,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -4709,7 +4698,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -4725,7 +4713,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
@@ -4745,14 +4732,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -4952,7 +4940,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -4968,7 +4955,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
@@ -4988,14 +4974,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -5210,7 +5197,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -5226,7 +5212,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
@@ -5246,14 +5231,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -5483,7 +5469,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -5499,7 +5484,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
@@ -5519,14 +5503,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {
@@ -5771,7 +5756,6 @@ namespace Cysharp.Text
         public int MinSize { get; }
 
         readonly FormatSegment[] segments;
-        readonly byte[] utf8Format;
 
         public Utf8PreparedFormat(string format)
         {
@@ -5787,7 +5771,6 @@ namespace Cysharp.Text
                 }
             }
             this.MinSize = size;
-            this.utf8Format = Encoding.UTF8.GetBytes(format);
         }
 
         public string Format(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15, T16 arg16)
@@ -5807,14 +5790,15 @@ namespace Cysharp.Text
         public void FormatTo<TBufferWriter>(ref TBufferWriter sb, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15, T16 arg16)
             where TBufferWriter : IBufferWriter<byte>
         {
-            var strSpan = utf8Format.AsSpan();
             foreach (var item in segments)
             {
                 if (!item.IsFormatArgument)
                 {
-                    var span = sb.GetSpan(item.Count);
-                    strSpan.Slice(item.Offset, item.Count).TryCopyTo(span);
-                    sb.Advance(item.Count);
+                    var strSpan = FormatString.AsSpan(item.Offset, item.Count);
+                    var size = Encoding.UTF8.GetMaxByteCount(item.Count);
+                    var span = sb.GetSpan(size);
+                    var count = Encoding.UTF8.GetBytes(strSpan, span);
+                    sb.Advance(count);
                 }
                 else
                 {

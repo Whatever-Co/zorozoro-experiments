@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Cysharp.Text
 {
-    public partial struct Utf8ValueStringBuilder : IDisposable, IBufferWriter<byte>
+    public partial struct Utf8ValueStringBuilder : IDisposable, IBufferWriter<byte>, IResettableBufferWriter<byte>
     {
         public delegate bool TryFormat<T>(T value, Span<byte> destination, out int written, StandardFormat format);
 
@@ -40,8 +40,12 @@ namespace Cysharp.Text
         [ThreadStatic]
         static byte[] scratchBuffer;
 
+        [ThreadStatic]
+        internal static bool scratchBufferUsed; 
+
         byte[] buffer;
         int index;
+        bool disposeImmediately;
 
         /// <summary>Length of written buffer.</summary>
         public int Length => index;
@@ -55,9 +59,24 @@ namespace Cysharp.Text
         /// <summary>Get the written buffer data.</summary>
         public ArraySegment<byte> AsArraySegment() => new ArraySegment<byte>(buffer, 0, index);
 
+        /// <summary>
+        /// Initializes a new instance
+        /// </summary>
+        /// <param name="disposeImmediately">
+        /// If true uses thread-static buffer that is faster but must return immediately.
+        /// </param>
+        /// <exception cref="InvalidOperationException">
+        /// This exception is thrown when <c>new StringBuilder(disposeImmediately: true)</c> or <c>ZString.CreateUtf8StringBuilder(notNested: true)</c> is nested.
+        /// See the README.md
+        /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Utf8ValueStringBuilder(bool disposeImmediately)
         {
+            if (disposeImmediately && scratchBufferUsed)
+            {
+                ThrowNestedException();
+            }
+
             byte[] buf;
             if (disposeImmediately)
             {
@@ -66,6 +85,7 @@ namespace Cysharp.Text
                 {
                     buf = scratchBuffer = new byte[ThreadStaticBufferSize];
                 }
+                scratchBufferUsed = true;
             }
             else
             {
@@ -74,6 +94,7 @@ namespace Cysharp.Text
 
             buffer = buf;
             index = 0;
+            this.disposeImmediately = disposeImmediately;
         }
 
         /// <summary>
@@ -91,6 +112,15 @@ namespace Cysharp.Text
             }
             buffer = null;
             index = 0;
+            if (disposeImmediately)
+            {
+                scratchBufferUsed = false;
+            }
+        }
+
+        public void Clear()
+        {
+            index = 0;
         }
 
         public void TryGrow(int sizeHint)
@@ -101,7 +131,7 @@ namespace Cysharp.Text
             }
         }
 
-        public void Grow(int sizeHint = 0)
+        public void Grow(int sizeHint)
         {
             var nextSize = buffer.Length * 2;
             if (sizeHint != 0)
@@ -155,6 +185,37 @@ namespace Cysharp.Text
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Append(char value, int repeatCount)
+        {
+            if (repeatCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(repeatCount));
+            }
+
+            if (value <= 0x7F) // ASCII
+            {
+                GetSpan(repeatCount).Fill((byte)value);
+                Advance(repeatCount);
+            }
+            else
+            { 
+                var maxLen = UTF8NoBom.GetMaxByteCount(1);
+                Span<byte> utf8Bytes = stackalloc byte[maxLen];
+                ReadOnlySpan<char> chars = stackalloc char[1] { value };
+
+                int len = UTF8NoBom.GetBytes(chars, utf8Bytes);
+
+                TryGrow(len * repeatCount);
+
+                for (int i = 0; i < repeatCount; i++)
+                {
+                    utf8Bytes.CopyTo(GetSpan(len));
+                    Advance(len);
+                }
+            }
+        }
+
         /// <summary>Appends the string representation of a specified value followed by the default line terminator to the end of this instance.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AppendLine(char value)
@@ -167,13 +228,7 @@ namespace Cysharp.Text
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Append(string value)
         {
-            var maxLen = UTF8NoBom.GetMaxByteCount(value.Length);
-            if (buffer.Length - index < maxLen)
-            {
-                Grow(maxLen);
-            }
-
-            index += UTF8NoBom.GetBytes(value, 0, value.Length, buffer, index);
+            Append(value.AsSpan());
         }
 
         /// <summary>Appends the string representation of a specified value followed by the default line terminator to the end of this instance.</summary>
@@ -184,12 +239,32 @@ namespace Cysharp.Text
             AppendLine();
         }
 
+        /// <summary>Appends a contiguous region of arbitrary memory to this instance.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Append(ReadOnlySpan<char> value)
+        {
+            var maxLen = UTF8NoBom.GetMaxByteCount(value.Length);
+            if (buffer.Length - index < maxLen)
+            {
+                Grow(maxLen);
+            }
+
+            index += UTF8NoBom.GetBytes(value, buffer.AsSpan(index));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AppendLine(ReadOnlySpan<char> value)
+        {
+            Append(value);
+            AppendLine();
+        }
+
         /// <summary>Appends the string representation of a specified value to this instance.</summary>
         public void Append<T>(T value)
         {
             if (!FormatterCache<T>.TryFormatDelegate(value, buffer.AsSpan(index), out var written, default))
             {
-                Grow();
+                Grow(written);
                 if (!FormatterCache<T>.TryFormatDelegate(value, buffer.AsSpan(index), out written, default))
                 {
                     ThrowArgumentException(nameof(value));
@@ -271,6 +346,11 @@ namespace Cysharp.Text
             index += count;
         }
 
+        void IResettableBufferWriter<byte>.Reset()
+        {
+            index = 0;
+        }
+
         void ThrowArgumentException(string paramName)
         {
             throw new ArgumentException("Can't format argument.", paramName);
@@ -281,12 +361,52 @@ namespace Cysharp.Text
             throw new FormatException("Index (zero based) must be greater than or equal to zero and less than the size of the argument list.");
         }
 
+        static void ThrowNestedException()
+        {
+            throw new NestedStringBuilderCreationException(nameof(Utf16ValueStringBuilder));
+        }
+
+        private void AppendFormatInternal<T>(T arg, StandardFormat writeFormat, string argName)
+        {
+            if (!FormatterCache<T>.TryFormatDelegate(arg, buffer.AsSpan(index), out var written, writeFormat))
+            {
+                Grow(written);
+                if (!FormatterCache<T>.TryFormatDelegate(arg, buffer.AsSpan(index), out written, writeFormat))
+                {
+                    ThrowArgumentException(argName);
+                }
+            }
+            index += written;
+        }
+
+
         /// <summary>
         /// Register custom formatter
         /// </summary>
         public static void RegisterTryFormat<T>(TryFormat<T> formatMethod)
         {
             FormatterCache<T>.TryFormatDelegate = formatMethod;
+        }
+
+        static TryFormat<T?> CreateNullableFormatter<T>() where T : struct
+        {
+            return new TryFormat<T?>((T? x, Span<byte> destination, out int written, StandardFormat format) =>
+            {
+                if (x == null)
+                {
+                    written = 0;
+                    return true;
+                }
+                return FormatterCache<T>.TryFormatDelegate(x.Value, destination, out written, format);
+            });
+        }
+
+        /// <summary>
+        /// Supports the Nullable type for a given struct type.
+        /// </summary>
+        public static void EnableNullableFormat<T>() where T : struct
+        {
+            RegisterTryFormat<T?>(CreateNullableFormatter<T>());
         }
 
         public static class FormatterCache<T>
@@ -318,7 +438,9 @@ namespace Cysharp.Text
                     return true;
                 }
 
-                var s = value.ToString();
+                var s = typeof(T) == typeof(string) ? Unsafe.As<string>(value) :
+                    (value is IFormattable formattable && format != default) ? formattable.ToString(format.ToString(), null) :
+                    value.ToString();
 
                 // also use this length when result is false.
                 written = UTF8NoBom.GetMaxByteCount(s.Length);
