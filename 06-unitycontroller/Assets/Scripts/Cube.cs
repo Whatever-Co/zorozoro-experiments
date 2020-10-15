@@ -5,6 +5,7 @@ using System.Threading;
 using System.Collections;
 using UnityEngine;
 using ZLogger;
+using IceMilkTea.Core;
 
 
 public class Cube : MonoBehaviour
@@ -27,12 +28,61 @@ public class Cube : MonoBehaviour
 
     private Vector2 currentMatPosition;
 
+    private enum StateEvent
+    {
+        GotPosition,
+        MissedPosition,
+    }
+
+
+
+
+    private ImtStateMachine<Cube> stateMachine;
+
+
+    void Awake()
+    {
+        stateMachine = new ImtStateMachine<Cube>(this);
+        stateMachine.AddTransition<NotOnSheetState, GoAroundState>((int)StateEvent.GotPosition);
+        stateMachine.AddTransition<GoAroundState, NotOnSheetState>((int)StateEvent.MissedPosition);
+        stateMachine.SetStartState<NotOnSheetState>();
+    }
+
+
+    void Start()
+    {
+        stateMachine.Update();
+    }
 
 
     void Update()
     {
-        // transform.localPosition = Vector3.Lerp(transform.localPosition, currentPosition, 0.5f);
-        // transform.localRotation = Quaternion.Slerp(transform.localRotation, currentRotation, 0.5f);
+        stateMachine.Update();
+    }
+
+
+    private class NotOnSheetState : ImtStateMachine<Cube>.State
+    {
+        protected internal override void Enter()
+        {
+            // Debug.LogWarning("Enter: NotOnSheetState");
+        }
+    }
+
+
+    private class GoAroundState : ImtStateMachine<Cube>.State
+    {
+        protected internal override void Enter()
+        {
+            // Debug.LogWarning("-> Enter: GoAroundState");
+            Context.StartGoAround();
+        }
+
+        protected internal override void Exit()
+        {
+            Context.StopGoAround();
+            // Debug.LogWarning("<- Exit: GoAroundState");
+        }
     }
 
 
@@ -170,10 +220,12 @@ public class Cube : MonoBehaviour
                     // var sensorRotation = reader.ReadUInt16();
                     transform.localPosition = new Vector3(centerX, 0, -centerY);
                     transform.localRotation = Quaternion.Euler(0, centerRotation, 0);
+                    stateMachine.SendEvent((int)StateEvent.GotPosition);
                     break;
                 case 0x02: // Standard ID
                     break;
                 case 0x03: // Position ID missed
+                    stateMachine.SendEvent((int)StateEvent.MissedPosition);
                     break;
                 case 0x04: // Standard ID missed
                     break;
