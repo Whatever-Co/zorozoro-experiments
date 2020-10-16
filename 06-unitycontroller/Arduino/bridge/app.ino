@@ -36,7 +36,11 @@ void App::Setup() {
     }
 #endif
 
+    ledOn(LED_RED);
+
     Serial.println("Start...");
+    // Bluefruit.configUuid128Count(32);
+    // Bluefruit.configAttrTableSize(0x3000);
     Bluefruit.begin(0, MAX_CUBES);
     Bluefruit.Central.setConnectCallback(OnConnect);
     Bluefruit.Central.setDisconnectCallback(OnDisconnect);
@@ -70,6 +74,7 @@ void App::Loop() {
     mqtt.loop();
 
     if (!mqtt.connected()) {
+        ledOn(LED_RED);
         while (!mqtt.connected()) {
             Serial.print("Attempting MQTT connection...");
             ethernet.stop();
@@ -84,6 +89,7 @@ void App::Loop() {
                 delay(3000);
             }
         }
+        ledOff(LED_RED);
     }
 
     delay(100);

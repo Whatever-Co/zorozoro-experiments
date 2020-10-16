@@ -7,7 +7,7 @@
 
 // #define ENABLE_SENSOR
 // #define ENABLE_LAMP
-// #define ENABLE_BATTERY
+#define ENABLE_BATTERY
 
 #include "hoge.h"
 #include "id.h"
