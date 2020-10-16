@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.UI;
 using ZLogger;
 
 
@@ -19,10 +20,11 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     private static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
 
+    public Text statusText;
 
     private CubeManager cubeManager;
     private HashSet<string> availableBridegs;
-    private HashSet<string> connectingCubes;
+    // private HashSet<string> connectingCubes;
 
     private Server server;
     private IMqttClientOptions options;
@@ -32,6 +34,8 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     async void Start()
     {
         Application.targetFrameRate = 60;
+
+        statusText.text = "Starting...";
 
         server = new Server();
         await server.Start();
@@ -45,7 +49,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         cubeManager.Publisher = client;
 
         availableBridegs = new HashSet<string>();
-        connectingCubes = new HashSet<string>();
+        // connectingCubes = new HashSet<string>();
 
         options = new MqttClientOptionsBuilder()
             .WithClientId("controller")
@@ -114,7 +118,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                             .WithAtLeastOnceQoS()
                             .Build();
                         client.PublishAsync(message, CancellationToken.None);
-                        connectingCubes.Add(payload);
+                        // connectingCubes.Add(payload);
                     }
                     return;
             }
@@ -128,13 +132,13 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                     break;
 
                 case "connected":
-                    connectingCubes.Remove(address);
+                    // connectingCubes.Remove(address);
                     var cube = cubeManager.AddOrGetCube(address);
                     cube.SetLamp(Color.white);
                     break;
 
                 case "disconnected":
-                    connectingCubes.Remove(address);
+                    // connectingCubes.Remove(address);
                     break;
 
                 case "position":
@@ -164,6 +168,11 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     void Update()
     {
+        if (Time.frameCount % 120 == 0)
+        {
+            statusText.text = $"{cubeManager.ConnectedCubeCount} cubes connected.";
+        }
+
         if (Input.GetKeyDown(KeyCode.Space))
         {
             RandomRotate();
@@ -199,10 +208,17 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     }
 
 
+    public void LookCenter()
+    {
+        cubeManager.LookCenter();
+    }
+
+
     public void GoAround()
     {
         cubeManager.GoAround();
     }
+
 
     async void OnApplicationQuit()
     {

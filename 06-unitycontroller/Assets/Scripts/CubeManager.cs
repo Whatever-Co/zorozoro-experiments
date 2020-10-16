@@ -1,8 +1,9 @@
-using System.Collections.Generic;
-using UnityEngine;
-using MQTTnet;
-using ZLogger;
 using Microsoft.Extensions.Logging;
+using MQTTnet;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using ZLogger;
 
 
 public class CubeManager : MonoBehaviour
@@ -26,6 +27,7 @@ public class CubeManager : MonoBehaviour
 
         var prefab = Resources.Load<GameObject>("Prefabs/Cube");
         cube = UnityEngine.Object.Instantiate((prefab).GetComponent<Cube>());
+        cube.name = address;
         cube.Init(address, Publisher);
         cube.transform.SetParent(World, false);
         cubes.Add(address, cube);
@@ -75,12 +77,32 @@ public class CubeManager : MonoBehaviour
     }
 
 
+    public void LookCenter()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.LookCenter();
+        }
+    }
+
+
     public void GoAround()
     {
         foreach (var (address, cube) in cubes)
         {
-            cube.StartGoAround();
+            cube.EnableGoAround();
         }
+    }
+
+
+    public int ConnectedCubeCount
+    {
+        get
+        {
+            var t = Time.realtimeSinceStartup;
+            return cubes.Where(kv => t - kv.Value.LastPositionTime < 1f).Count();
+        }
+
     }
 
 }

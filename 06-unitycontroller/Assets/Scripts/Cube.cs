@@ -15,6 +15,8 @@ public class Cube : MonoBehaviour
     public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
     public static readonly Vector2 MAT_CENTER = (MAT_MIN + MAT_MAX) / 2;
 
+    public static readonly float DOTS_PER_METER = 411f / 0.560f; // 411/0.560 dot/m
+
 
     public string Address { get; private set; }
     public bool IsConnected { get; private set; }
@@ -23,66 +25,12 @@ public class Cube : MonoBehaviour
 
     private IApplicationMessagePublisher publisher;
 
-    // private Vector3 currentPosition;
-    // private Quaternion currentRotation;
-
     private Vector2 currentMatPosition;
-
-    private enum StateEvent
+    public float LastPositionTime { get; private set; } = 0;
+    private bool goingAroundNow = false;
+    public bool IsOnSheet
     {
-        GotPosition,
-        MissedPosition,
-    }
-
-
-
-
-    private ImtStateMachine<Cube> stateMachine;
-
-
-    void Awake()
-    {
-        stateMachine = new ImtStateMachine<Cube>(this);
-        stateMachine.AddTransition<NotOnSheetState, GoAroundState>((int)StateEvent.GotPosition);
-        stateMachine.AddTransition<GoAroundState, NotOnSheetState>((int)StateEvent.MissedPosition);
-        stateMachine.SetStartState<NotOnSheetState>();
-    }
-
-
-    void Start()
-    {
-        stateMachine.Update();
-    }
-
-
-    void Update()
-    {
-        stateMachine.Update();
-    }
-
-
-    private class NotOnSheetState : ImtStateMachine<Cube>.State
-    {
-        protected internal override void Enter()
-        {
-            // Debug.LogWarning("Enter: NotOnSheetState");
-        }
-    }
-
-
-    private class GoAroundState : ImtStateMachine<Cube>.State
-    {
-        protected internal override void Enter()
-        {
-            // Debug.LogWarning("-> Enter: GoAroundState");
-            Context.StartGoAround();
-        }
-
-        protected internal override void Exit()
-        {
-            Context.StopGoAround();
-            // Debug.LogWarning("<- Exit: GoAroundState");
-        }
+        get => Vector2.Distance(currentMatPosition, Vector2.zero) > Vector2.kEpsilon;
     }
 
 
@@ -96,10 +44,7 @@ public class Cube : MonoBehaviour
 
     public void SetMotor(int angle)
     {
-        // byte[] data = { 0x02,
-        //                 0x01, 0x01, 50,
-        //                 0x02, 0x02, 50,
-        //                 100 };
+        DisableGoAround();
         try
         {
             using (var stream = new MemoryStream())
@@ -125,27 +70,70 @@ public class Cube : MonoBehaviour
         }
     }
 
-    public static readonly float DotPerM = 411f / 0.560f; // 411/0.560 dot/m
+
+
+    public void LookCenter()
+    {
+        if (!IsOnSheet)
+        {
+            return;
+        }
+        var p = currentMatPosition - MAT_CENTER;
+        var a = Mathf.Atan2(p.y, p.x) * Mathf.Rad2Deg;
+        SetMotor(Mathf.RoundToInt(a + 360 + 90));
+    }
+
+
+    public void EnableGoAround()
+    {
+        if (goingAroundNow)
+        {
+            return;
+        }
+        goingAroundNow = true;
+
+        Debug.LogWarning($"currentMatPosition={currentMatPosition} dist={Vector2.Distance(currentMatPosition, Vector2.zero)}, LastPositionTime={LastPositionTime}, dt={Time.realtimeSinceStartup - LastPositionTime}");
+
+        if (IsOnSheet)
+        {
+            StartGoAround();
+        }
+    }
+
+
+    public void DisableGoAround()
+    {
+        StopGoAround();
+        goingAroundNow = false;
+    }
 
 
     float radius;
     byte speed;
     Coroutine coroutine = null;
 
-    public void StartGoAround()
+    private void StartGoAround()
     {
-        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), 50, 90);
+        if (coroutine != null)
+        {
+            return;
+        }
+
+        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), 30, 90);
+        // radius = 90;
         speed = (byte)Mathf.FloorToInt(radius / 5f);
         radius = speed * 5;
+        Debug.LogWarning($"radius={radius}, speed={speed}");
         coroutine = StartCoroutine(_GoAround());
     }
 
 
-    public void StopGoAround()
+    private void StopGoAround()
     {
         if (coroutine != null)
         {
             StopCoroutine(coroutine);
+            coroutine = null;
         }
     }
 
@@ -169,7 +157,7 @@ public class Cube : MonoBehaviour
 
                     var p = currentMatPosition - MAT_CENTER;
                     var startAngle = Mathf.Atan2(p.y, p.x);
-                    Debug.LogWarning($"a={startAngle * Mathf.Rad2Deg}");
+                    Debug.LogWarning($"t={Time.realtimeSinceStartup}, a={startAngle * Mathf.Rad2Deg}");
                     // var radius = Vector2.Distance(currentMatPosition, MAT_CENTER);
                     for (int i = 1; i <= 2; i++)
                     {
@@ -220,13 +208,26 @@ public class Cube : MonoBehaviour
                     // var sensorRotation = reader.ReadUInt16();
                     transform.localPosition = new Vector3(centerX, 0, -centerY);
                     transform.localRotation = Quaternion.Euler(0, centerRotation, 0);
-                    stateMachine.SendEvent((int)StateEvent.GotPosition);
+
+                    GetComponentInChildren<MeshRenderer>().enabled = true;
+
+                    LastPositionTime = Time.realtimeSinceStartup;
+                    if (goingAroundNow)
+                    {
+                        StartGoAround();
+                    }
                     break;
+
                 case 0x02: // Standard ID
                     break;
+
                 case 0x03: // Position ID missed
-                    stateMachine.SendEvent((int)StateEvent.MissedPosition);
+                    currentMatPosition = Vector2.zero;
+                    GetComponentInChildren<MeshRenderer>().enabled = false;
+                    LastPositionTime = Time.realtimeSinceStartup;
+                    StopGoAround();
                     break;
+
                 case 0x04: // Standard ID missed
                     break;
             }
