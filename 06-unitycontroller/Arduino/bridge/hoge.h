@@ -24,6 +24,8 @@ class App {
     static void SubscribeTopics(String address);
     static void UnsubscribeTopics(String address);
 
+    static void UpdateStatusLED();
+
     static String ip_address_;
     static bool accept_new_cube_;
 };

@@ -1,3 +1,4 @@
+#include <Adafruit_NeoPixel.h>
 #include <Ethernet2.h>
 #include <MQTT.h>
 #include <SPI.h>
@@ -19,6 +20,10 @@
 static EthernetClient ethernet;
 static MQTTClient mqtt;
 
+static Adafruit_NeoPixel pixels(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+static uint32_t colors[MAX_CUBES + 1] = {0xff0000, 0xf7215b, 0x15f8c2, 0xf7e411, 0xa312f7,
+                                         0x4970ff, 0xfc8c00, 0x2ee236, 0xf954d7, 0xa7f9ff, 0x000000};
+
 static const char *requiredTopics[] = {"motor", "lamp"};
 
 //----------------------------------------
@@ -37,6 +42,7 @@ void App::Setup() {
 #endif
 
     ledOn(LED_RED);
+    pixels.begin();
 
     Serial.println("Start...");
     // Bluefruit.configUuid128Count(32);
@@ -68,6 +74,8 @@ void App::Setup() {
     mqtt.onMessageAdvanced(OnMessage);
 
     Serial.println("ready...");
+
+    UpdateStatusLED();
 }
 
 void App::Loop() {
@@ -182,6 +190,7 @@ void App::OnConnect(uint16_t conn_handle) {
     }
 
     StartAcceptNewCube();
+    UpdateStatusLED();
 }
 
 void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
@@ -200,6 +209,7 @@ void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
     CubeManager::Cleanup(conn_handle);
 
     StartAcceptNewCube();
+    UpdateStatusLED();
 }
 
 void App::StartAcceptNewCube() {
@@ -249,6 +259,12 @@ void App::UnsubscribeTopics(String address) {
         mqtt.unsubscribe(topic);
         Serial.printf("Unsubscribed: %s\n", topic);
     }
+}
+
+void App::UpdateStatusLED() {
+    pixels.setPixelColor(0, colors[CubeManager::GetNumCubes()]);
+    pixels.setBrightness(8);
+    pixels.show();
 }
 
 //----------------------------------------
