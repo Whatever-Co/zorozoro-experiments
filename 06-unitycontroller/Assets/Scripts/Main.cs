@@ -142,7 +142,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                     break;
 
                 case "position":
-                    cubeManager.SetPosition(address, m.Payload);
+                    cubeManager.NotifyPosition(address, m.Payload);
                     break;
 
                 case "button":
@@ -158,7 +158,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
                 case "battery":
                     byte value = m.Payload[0];
-                    cubeManager.SetBattery(address, value);
+                    cubeManager.NotifyBattery(address, value);
                     break;
             }
         });
@@ -173,9 +173,42 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
             statusText.text = $"{cubeManager.ConnectedCubeCount} cubes connected.";
         }
 
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             RandomRotate();
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            RandomColor();
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha3))
+        {
+            LookCenter();
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            GoAround();
+        }
+
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            cubeManager.MoveForward();
+        }
+        if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            cubeManager.MoveBackward();
+        }
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            cubeManager.RotateRight();
+        }
+        if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            cubeManager.RotateLeft();
+        }
+        if (Input.GetKeyUp(KeyCode.UpArrow) || Input.GetKeyUp(KeyCode.DownArrow) || Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.LeftArrow))
+        {
+            cubeManager.Stop();
         }
     }
 
@@ -195,7 +228,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     public void RandomColor()
     {
-        cubeManager.SetLampAll(Colors[count++ % Colors.Length]);
+        cubeManager.SetLamp(Colors[count++ % Colors.Length]);
     }
 
 
@@ -203,7 +236,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     public void RandomRotate()
     {
-        cubeManager.SetMotorAll(angle);
+        cubeManager.SetDirection(angle);
         angle = (angle + 135) % 360;
     }
 

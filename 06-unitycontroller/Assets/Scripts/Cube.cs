@@ -23,7 +23,7 @@ public class Cube : MonoBehaviour
 
     public int Battery { get; private set; } = -1;
 
-    private IApplicationMessagePublisher publisher;
+    private CubeManager manager { get; set; }
 
     private Vector2 currentMatPosition;
     public float LastPositionTime { get; private set; } = 0;
@@ -34,42 +34,74 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void Init(string address, IApplicationMessagePublisher publisher)
+    public void Init(string address, CubeManager cubeManager)
     {
         Address = address;
         IsConnected = false;
-        this.publisher = publisher;
+        this.manager = cubeManager;
     }
 
 
-    public void SetMotor(int angle)
+    public void MoveForward(byte speed = 10, byte timeout = 255)
     {
         DisableGoAround();
-        try
-        {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                byte[] data = { 0x03, 0x00, 5, 0, 100, 0, 0x00 };
-                writer.Write(data);
-                writer.Write((ushort)0xffff);
-                writer.Write((ushort)0xffff);
-                writer.Write((ushort)((0x00 << 13) | angle));
-                Debug.Log(stream.ToArray());
-                var message = new MqttApplicationMessageBuilder()
-                    .WithTopic(Address + "/motor")
-                    .WithPayload(stream.ToArray())
-                    .WithAtLeastOnceQoS()
-                    .Build();
-                publisher.PublishAsync(message, CancellationToken.None);
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogException(e);
-        }
+
+        byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x01, speed, timeout };
+        manager.SendMotor(Address, data);
     }
 
+
+    public void MoveBackward(byte speed = 10, byte timeout = 255)
+    {
+        DisableGoAround();
+
+        byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x02, speed, timeout };
+        manager.SendMotor(Address, data);
+    }
+
+
+    public void RotateRight(byte speed = 10, byte timeout = 255)
+    {
+        DisableGoAround();
+
+        byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x02, speed, timeout };
+        manager.SendMotor(Address, data);
+    }
+
+
+    public void RotateLeft(byte speed = 10, byte timeout = 255)
+    {
+        DisableGoAround();
+
+        byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x01, speed, timeout };
+        manager.SendMotor(Address, data);
+    }
+
+
+    public void Stop()
+    {
+        DisableGoAround();
+
+        byte[] data = { 0x01, 0x01, 0x01, 0, 0x02, 0x01, 0 };
+        manager.SendMotor(Address, data);
+    }
+
+
+    public void SetDirection(int angle)
+    {
+        DisableGoAround();
+
+        using (var stream = new MemoryStream())
+        using (var writer = new BinaryWriter(stream))
+        {
+            byte[] data = { 0x03, 0x00, 5, 0, 100, 0, 0x00 };
+            writer.Write(data);
+            writer.Write((ushort)0xffff);
+            writer.Write((ushort)0xffff);
+            writer.Write((ushort)((0x00 << 13) | angle));
+            manager.SendMotor(Address, stream.ToArray());
+        }
+    }
 
 
     public void LookCenter()
@@ -80,7 +112,7 @@ public class Cube : MonoBehaviour
         }
         var p = currentMatPosition - MAT_CENTER;
         var a = Mathf.Atan2(p.y, p.x) * Mathf.Rad2Deg;
-        SetMotor(Mathf.RoundToInt(a + 360 + 90));
+        SetDirection(Mathf.RoundToInt(a + 360 + 90));
     }
 
 
@@ -147,41 +179,28 @@ public class Cube : MonoBehaviour
             // var dist = 2 * Mathf.PI * radius * A / 360f;
             // float A = DIST / (2 * Mathf.PI * radius) * 360;
             // Debug.LogWarning($"radius={radius}, DIST={DIST}, A={A}");
-            try
+
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
             {
-                using (var stream = new MemoryStream())
-                using (var writer = new BinaryWriter(stream))
+                byte[] data = { 0x04, 0x66, 100, 1, speed, 0, 0x00, 0 };
+                writer.Write(data);
+
+                var p = currentMatPosition - MAT_CENTER;
+                var startAngle = Mathf.Atan2(p.y, p.x);
+                Debug.LogWarning($"t={Time.realtimeSinceStartup}, a={startAngle * Mathf.Rad2Deg}");
+                // var radius = Vector2.Distance(currentMatPosition, MAT_CENTER);
+                for (int i = 1; i <= 2; i++)
                 {
-                    byte[] data = { 0x04, 0x66, 100, 1, speed, 0, 0x00, 0 };
-                    writer.Write(data);
-
-                    var p = currentMatPosition - MAT_CENTER;
-                    var startAngle = Mathf.Atan2(p.y, p.x);
-                    Debug.LogWarning($"t={Time.realtimeSinceStartup}, a={startAngle * Mathf.Rad2Deg}");
-                    // var radius = Vector2.Distance(currentMatPosition, MAT_CENTER);
-                    for (int i = 1; i <= 2; i++)
-                    {
-                        var a = startAngle + i / 2f * A * Mathf.Deg2Rad;
-                        ushort x = (ushort)(Mathf.Cos(a) * radius + MAT_CENTER.x);
-                        ushort y = (ushort)(Mathf.Sin(a) * radius + MAT_CENTER.y);
-                        Debug.LogWarning($"a={a * Mathf.Rad2Deg}, x={x}, y={y}");
-                        writer.Write(x);
-                        writer.Write(y);
-                        writer.Write((ushort)(0x05 << 13));
-                    }
-
-                    // Debug.LogWarning(stream.Length);
-                    var message = new MqttApplicationMessageBuilder()
-                        .WithTopic(Address + "/motor")
-                        .WithPayload(stream.ToArray())
-                        .WithAtLeastOnceQoS()
-                        .Build();
-                    publisher.PublishAsync(message, CancellationToken.None);
+                    var a = startAngle + i / 2f * A * Mathf.Deg2Rad;
+                    ushort x = (ushort)(Mathf.Cos(a) * radius + MAT_CENTER.x);
+                    ushort y = (ushort)(Mathf.Sin(a) * radius + MAT_CENTER.y);
+                    Debug.LogWarning($"a={a * Mathf.Rad2Deg}, x={x}, y={y}");
+                    writer.Write(x);
+                    writer.Write(y);
+                    writer.Write((ushort)(0x05 << 13));
                 }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogException(e);
+                manager.SendMotor(Address, stream.ToArray());
             }
 
             yield return new WaitForSeconds(2f);
@@ -238,7 +257,7 @@ public class Cube : MonoBehaviour
     public void SetLamp(byte r, byte g, byte b)
     {
         byte[] data = { 0x03, 0x00, 0x01, 0x01, r, g, b };
-        WriteLampCommand(data);
+        manager.SendLamp(Address, data);
     }
 
 
@@ -254,24 +273,13 @@ public class Cube : MonoBehaviour
         byte[] data = { 0x04, 0x00, 0x02,
                         duration, 0x01, 0x01, r, g, b,
                         duration, 0x01, 0x01, 0, 0, 0 };
-        WriteLampCommand(data);
+        manager.SendLamp(Address, data);
     }
 
 
     public void SetLampBlink(Color32 color, int interval)
     {
         SetLampBlink(color.r, color.g, color.b, interval);
-    }
-
-
-    public void WriteLampCommand(byte[] data)
-    {
-        var message = new MqttApplicationMessageBuilder()
-            .WithTopic(Address + "/lamp")
-            .WithPayload(data)
-            .WithAtLeastOnceQoS()
-            .Build();
-        publisher.PublishAsync(message, CancellationToken.None);
     }
 
 
