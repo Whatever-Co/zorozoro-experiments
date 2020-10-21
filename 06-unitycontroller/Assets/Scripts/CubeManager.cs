@@ -120,7 +120,7 @@ public class CubeManager : MonoBehaviour
     public void NotifyPosition(string address, byte[] data)
     {
         var cube = AddOrGetCube(address);
-        cube.SetPosition(data);
+        cube.NotifyPosition(data);
     }
 
 
@@ -155,7 +155,7 @@ public class CubeManager : MonoBehaviour
     {
         // logger.ZLogTrace("Setting battery of {0} to {1}", address, value);
         var cube = AddOrGetCube(address);
-        cube.SetBattery(value);
+        cube.NotifyBattery(value);
     }
 
 
@@ -182,7 +182,7 @@ public class CubeManager : MonoBehaviour
         get
         {
             var t = Time.realtimeSinceStartup;
-            return cubes.Where(kv => t - kv.Value.LastPositionTime < 1f).Count();
+            return cubes.Where(kv => t - kv.Value.LastBatteryTime < 8f).Count();
         }
 
     }

@@ -22,6 +22,7 @@ public class Cube : MonoBehaviour
     public bool IsConnected { get; private set; }
 
     public int Battery { get; private set; } = -1;
+    public float LastBatteryTime { get; private set; } = 0;
 
     private CubeManager manager { get; set; }
 
@@ -208,7 +209,7 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void SetPosition(byte[] data)
+    public void NotifyPosition(byte[] data)
     {
         using (var stream = new MemoryStream(data))
         using (var reader = new BinaryReader(stream))
@@ -283,8 +284,9 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void SetBattery(int battery)
+    public void NotifyBattery(int battery)
     {
+        LastBatteryTime = Time.realtimeSinceStartup;
         if (Battery == battery)
         {
             return;

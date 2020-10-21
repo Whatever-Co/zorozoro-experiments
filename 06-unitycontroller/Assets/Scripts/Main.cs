@@ -23,7 +23,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     public Text statusText;
 
     private CubeManager cubeManager;
-    private HashSet<string> availableBridegs;
+    private HashSet<(string, byte)> availableBridegs;
     // private HashSet<string> connectingCubes;
 
     private Server server;
@@ -48,7 +48,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         cubeManager = GetComponent<CubeManager>();
         cubeManager.Publisher = client;
 
-        availableBridegs = new HashSet<string>();
+        availableBridegs = new HashSet<(string, byte)>();
         // connectingCubes = new HashSet<string>();
 
         options = new MqttClientOptionsBuilder()
@@ -107,13 +107,13 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
                     // {
                     //     return;
                     // }
-                    var bridge = availableBridegs.FirstOrDefault();
-                    logger.ZLogDebug(bridge);
-                    if (!string.IsNullOrEmpty(bridge))
+                    var value = availableBridegs.OrderByDescending(x => x.Item2).FirstOrDefault();
+                    logger.ZLogDebug($"{value.Item1}, {value.Item2}");
+                    if (!string.IsNullOrEmpty(value.Item1))
                     {
-                        availableBridegs.Remove(bridge);
+                        availableBridegs.Remove(value);
                         var message = new MqttApplicationMessageBuilder()
-                            .WithTopic($"{bridge}/newcube")
+                            .WithTopic($"{value.Item1}/newcube")
                             .WithPayload(m.Payload)
                             .WithAtLeastOnceQoS()
                             .Build();
@@ -128,7 +128,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
             {
                 case "available":
                     logger.ZLogTrace("available cliente: {0}", address);
-                    availableBridegs.Add(address);
+                    availableBridegs.Add((address, m.Payload[0]));
                     break;
 
                 case "connected":
@@ -259,6 +259,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         client.Dispose();
         client = null;
         await server.Stop();
+        Debug.LogWarning("Application Quit");
     }
 
 }

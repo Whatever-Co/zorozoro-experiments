@@ -220,7 +220,8 @@ void App::StartAcceptNewCube() {
     auto topic = ip_address_ + "/newcube";
     mqtt.subscribe(topic);
     topic = ip_address_ + "/available";
-    mqtt.publish(topic, "", false, 1);
+    char available = MAX_CUBES - CubeManager::GetNumCubes();
+    mqtt.publish(topic.c_str(), &available, 1, false, 1);
     Serial.println("Start accept new cube");
     accept_new_cube_ = true;
 }
