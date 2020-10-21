@@ -6,7 +6,7 @@
         {
             "label": "Upload",
             "type": "shell",
-            "command": "~/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/tools/adafruit-nrfutil/macos/adafruit-nrfutil --verbose dfu serial -pkg ${workspaceFolder}/build/app.ino.zip -p /dev/tty.usbmodem141301 -b 115200 --singlebank --touch 1200",
+            "command": "~/Library/Arduino15/packages/adafruit/hardware/nrf52/0.20.5/tools/adafruit-nrfutil/macos/adafruit-nrfutil --verbose dfu serial -pkg ${workspaceFolder}/build/app.ino.zip -p /dev/tty.usbmodem23401 -b 115200 --singlebank --touch 1200",
             "presentation": {
                 "reveal": "always",
                 "panel": "shared"

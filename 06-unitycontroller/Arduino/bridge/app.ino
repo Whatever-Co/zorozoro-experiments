@@ -1,4 +1,5 @@
 #include <Adafruit_NeoPixel.h>
+#include <Chrono.h>
 #include <Ethernet2.h>
 #include <MQTT.h>
 #include <SPI.h>
@@ -25,6 +26,8 @@ static uint32_t colors[MAX_CUBES + 1] = {0xff0000, 0xf7215b, 0x15f8c2, 0xf7e411,
                                          0x4970ff, 0xfc8c00, 0x2ee236, 0xf954d7, 0xa7f9ff, 0x000000};
 
 static const char *requiredTopics[] = {"motor", "lamp"};
+
+static Chrono myChrono;
 
 //----------------------------------------
 
@@ -58,8 +61,9 @@ void App::Setup() {
     Serial.println("Initialize Ethernet with DHCP:");
     if (Ethernet.begin(mac) == 0) {
         Serial.println("Failed to configure Ethernet using DHCP");
-        delay(3000);
         while (true) {
+            digitalToggle(LED_RED);
+            delay(300);
         }
     }
     Serial.print("  DHCP assigned IP ");
@@ -92,12 +96,18 @@ void App::Loop() {
                 for (auto &addr : CubeManager::GetAddresses()) {
                     SubscribeTopics(addr);
                 }
+                myChrono.restart();
             } else {
-                Serial.print("failed, try again in 3 seconds");
+                Serial.println("failed, try again in 3 seconds");
                 delay(3000);
             }
         }
         ledOff(LED_RED);
+    }
+
+    if (myChrono.hasPassed(3000)) {
+        myChrono.restart();
+        StartAcceptNewCube();
     }
 
     delay(100);
@@ -214,7 +224,7 @@ void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
 
 void App::StartAcceptNewCube() {
     if (CubeManager::GetNumCubes() == MAX_CUBES) {
-        Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
+        // Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
         return;
     }
     auto topic = ip_address_ + "/newcube";
