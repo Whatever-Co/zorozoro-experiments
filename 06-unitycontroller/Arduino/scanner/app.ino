@@ -49,6 +49,8 @@ void setup() {
     }
 #endif
 
+    ledOn(LED_RED);
+
     Serial.println("Start...");
     Bluefruit.begin(0, 0);
     // Bluefruit.Central.setConnectCallback(OnConnect);
@@ -89,6 +91,7 @@ void loop() {
     mqtt.loop();
 
     if (!mqtt.connected()) {
+        ledOn(LED_RED);
         while (!mqtt.connected()) {
             Serial.print("Attempting MQTT connection...");
             ethernet.stop();
@@ -99,6 +102,7 @@ void loop() {
                 delay(3000);
             }
         }
+        ledOff(LED_RED);
     }
 
     delay(100);
