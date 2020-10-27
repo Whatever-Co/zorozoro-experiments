@@ -14,6 +14,7 @@ public class CubeManager : MonoBehaviour
 
 
     public IApplicationMessagePublisher Publisher { get; set; }
+    public TcpServer TcpServer { get; set; }
     public Transform World;
 
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
@@ -46,6 +47,7 @@ public class CubeManager : MonoBehaviour
                 .WithAtLeastOnceQoS()
                 .Build();
             Publisher.PublishAsync(message, CancellationToken.None);
+            TcpServer.Publish(message);
         }
         catch (System.Exception e)
         {
@@ -64,6 +66,7 @@ public class CubeManager : MonoBehaviour
                 .WithAtLeastOnceQoS()
                 .Build();
             Publisher.PublishAsync(message, CancellationToken.None);
+            TcpServer.Publish(message);
         }
         catch (System.Exception e)
         {

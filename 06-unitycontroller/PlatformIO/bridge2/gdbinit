@@ -1,0 +1,5 @@
+define restart
+    monitor reset 
+    shell sleep 1
+    cont 
+end

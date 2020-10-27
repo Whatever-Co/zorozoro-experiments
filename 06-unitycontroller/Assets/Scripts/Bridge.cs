@@ -14,12 +14,19 @@ public class Bridge
     static readonly ILogger<Bridge> logger = LogManager.GetLogger<Bridge>();
 
 
+    public string Address { get; private set; }
+    public int AvailableSlot { get; set; } = 0;
 
 
-    public Bridge()
+    public Bridge(string address)
     {
+        Address = address;
     }
 
 
+    public override string ToString()
+    {
+        return $"[Bridge Address={Address}, AvailableSlot={AvailableSlot}]";
+    }
 
 }
