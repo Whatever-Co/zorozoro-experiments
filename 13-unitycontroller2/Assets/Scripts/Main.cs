@@ -23,7 +23,7 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     public Text statusText;
 
     private CubeManager cubeManager;
-    private Dictionary<string, Bridge> availableBridegs;
+    private List<Bridge> bridges;
 
     // private Server server;
     private IMqttClientOptions options;
@@ -46,11 +46,6 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         client.UseDisconnectedHandler(this);
         client.UseApplicationMessageReceivedHandler(this);
 
-        cubeManager = GetComponent<CubeManager>();
-        cubeManager.Publisher = client;
-
-        availableBridegs = new Dictionary<string, Bridge>();
-
         options = new MqttClientOptionsBuilder()
             .WithClientId("controller")
             .WithTcpServer("localhost")
@@ -59,8 +54,12 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
         await client.ConnectAsync(options);
 
         tcp = gameObject.GetComponent<TcpServer>();
-        tcp.UseApplicationMessageReceivedHandler(this);
+        tcp.Connected += OnConnected;
 
+        bridges = new List<Bridge>();
+
+        cubeManager = GetComponent<CubeManager>();
+        cubeManager.Publisher = client;
         cubeManager.TcpServer = tcp;
     }
 
@@ -108,68 +107,58 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
             switch (m.Topic)
             {
                 case "newcube":
-                    var value = availableBridegs.OrderByDescending(x => x.Value.AvailableSlot).FirstOrDefault();
-                    Debug.LogWarning(value);
-                    if (!string.IsNullOrEmpty(value.Key))
-                    {
-                        availableBridegs.Remove(value.Key);
-                        var message = new MqttApplicationMessageBuilder()
-                            .WithTopic($"{value.Key}/newcube")
-                            .WithPayload(m.Payload)
-                            .WithAtLeastOnceQoS()
-                            .Build();
-                        client.PublishAsync(message, CancellationToken.None);
-                        tcp.Publish(message);
-                    }
+                    var bridge = bridges.Where(b => !b.ConnectingCube).OrderByDescending(b => b.AvailableSlot).FirstOrDefault();
+                    Debug.LogWarning(bridge);
+                    bridge?.ConnectToCube(m.Payload);
                     return;
-            }
-            var t = m.Topic.Split('/');
-            var address = t[0];
-            switch (t[1])
-            {
-                case "available":
-                    logger.ZLogTrace("available client: {0} / {1}", address, m.Payload[0]);
-                    if (availableBridegs.ContainsKey(address))
-                    {
-                        availableBridegs[address].AvailableSlot = m.Payload[0];
-                    }
-                    else
-                    {
-                        var bridge = new Bridge(address) { AvailableSlot = m.Payload[0] };
-                        availableBridegs.Add(address, bridge);
-                    }
-                    break;
-
-                case "connected":
-                    var cube = cubeManager.AddOrGetCube(address);
-                    cube.SetLamp(Color.white);
-                    break;
-
-                case "disconnected":
-                    break;
-
-                case "position":
-                    cubeManager.NotifyPosition(address, m.Payload);
-                    break;
-
-                case "button":
-                    // byte state = m.Payload[0];
-                    // if (state > 0)
-                    // {
-                    //     // var color = new Color(Random.value, Random.value, Random.value);
-                    //     // logger.ZLogDebug(color.ToString());
-                    //     // cubeManager.SetLampAll(color);
-                    //     cubeManager.AddOrGetCube(address).SetMotor();
-                    // }
-                    break;
-
-                case "battery":
-                    byte value = m.Payload[0];
-                    cubeManager.NotifyBattery(address, value);
-                    break;
             }
         });
         return null;
+    }
+
+
+    private void OnConnected(Bridge bridge)
+    {
+        Debug.Log("OnConnected");
+        bridge.OnMessage += OnMessage;
+        bridge.OnDisconnected += OnDisconnected;
+        bridge.Start();
+        bridges.Add(bridge);
+    }
+
+
+    private void OnDisconnected(Bridge bridge)
+    {
+        Debug.Log("OnDisconnected");
+        bridge.OnDisconnected -= OnDisconnected;
+        bridges.Remove(bridge);
+    }
+
+
+    private void OnMessage(Bridge bridge, string address, string command, byte[] payload)
+    {
+        Dispatcher.runOnUiThread(() =>
+        {
+            switch (command)
+            {
+                case "connected":
+                    var cube = cubeManager.AddCube(address, bridge);
+                    Debug.Log(cube);
+                    break;
+
+                case "disconnected":
+                    cubeManager.RemoveCube(address);
+                    break;
+
+                case "position":
+                    cubeManager.NotifyPosition(address, payload);
+                    break;
+
+                case "battery":
+                    cubeManager.NotifyBattery(address, payload[0]);
+                    break;
+            }
+        });
     }
 
 
@@ -262,6 +251,10 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
 
     async void OnApplicationQuit()
     {
+        foreach (var bridge in bridges)
+        {
+            bridge.Stop();
+        }
         await client.DisconnectAsync();
         client.Dispose();
         client = null;

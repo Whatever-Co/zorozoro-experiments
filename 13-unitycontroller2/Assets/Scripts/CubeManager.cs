@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using MQTTnet;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using UnityEngine;
 using ZLogger;
 
@@ -20,7 +19,7 @@ public class CubeManager : MonoBehaviour
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
 
 
-    public Cube AddOrGetCube(string address)
+    public Cube AddCube(string address, Bridge bridge)
     {
         if (cubes.TryGetValue(address, out var cube))
         {
@@ -30,47 +29,30 @@ public class CubeManager : MonoBehaviour
         var prefab = Resources.Load<GameObject>("Prefabs/Cube");
         cube = UnityEngine.Object.Instantiate((prefab).GetComponent<Cube>());
         cube.name = address;
-        cube.Init(address, this);
+        cube.Init(address, bridge);
         cube.transform.SetParent(World, false);
         cubes.Add(address, cube);
         return cube;
     }
 
 
-    public void SendMotor(string address, byte[] payload)
+    public Cube GetCube(string address)
     {
-        try
+        if (cubes.TryGetValue(address, out var cube))
         {
-            var message = new MqttApplicationMessageBuilder()
-                .WithTopic(address + "/motor")
-                .WithPayload(payload)
-                .WithAtLeastOnceQoS()
-                .Build();
-            Publisher.PublishAsync(message, CancellationToken.None);
-            TcpServer.Publish(message);
+            return cube;
         }
-        catch (System.Exception e)
-        {
-            Debug.LogException(e);
-        }
+        return null;
     }
 
 
-    public void SendLamp(string address, byte[] payload)
+    public void RemoveCube(string address)
     {
-        try
+        var cube = GetCube(address);
+        if (cube != null)
         {
-            var message = new MqttApplicationMessageBuilder()
-                .WithTopic(address + "/lamp")
-                .WithPayload(payload)
-                .WithAtLeastOnceQoS()
-                .Build();
-            Publisher.PublishAsync(message, CancellationToken.None);
-            TcpServer.Publish(message);
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogException(e);
+            cubes.Remove(address);
+            Destroy(cube.gameObject);
         }
     }
 
@@ -122,8 +104,8 @@ public class CubeManager : MonoBehaviour
 
     public void NotifyPosition(string address, byte[] data)
     {
-        var cube = AddOrGetCube(address);
-        cube.NotifyPosition(data);
+        var cube = GetCube(address);
+        cube?.NotifyPosition(data);
     }
 
 
@@ -157,8 +139,8 @@ public class CubeManager : MonoBehaviour
     public void NotifyBattery(string address, int value)
     {
         // logger.ZLogTrace("Setting battery of {0} to {1}", address, value);
-        var cube = AddOrGetCube(address);
-        cube.NotifyBattery(value);
+        var cube = GetCube(address);
+        cube?.NotifyBattery(value);
     }
 
 

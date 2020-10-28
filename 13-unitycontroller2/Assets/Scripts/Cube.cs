@@ -24,7 +24,7 @@ public class Cube : MonoBehaviour
     public int Battery { get; private set; } = -1;
     public float LastBatteryTime { get; private set; } = 0;
 
-    private CubeManager manager { get; set; }
+    public Bridge Bridge { get; private set; }
 
     private Vector2 currentMatPosition;
     public float LastPositionTime { get; private set; } = 0;
@@ -35,11 +35,17 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void Init(string address, CubeManager cubeManager)
+    public void Init(string address, Bridge bridge)
     {
         Address = address;
+        Bridge = bridge;
         IsConnected = false;
-        this.manager = cubeManager;
+    }
+
+
+    void OnDestroy()
+    {
+        Bridge = null;
     }
 
 
@@ -48,7 +54,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x01, speed, timeout };
-        manager.SendMotor(Address, data);
+        Bridge.SendMotor(Address, data);
     }
 
 
@@ -57,7 +63,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x02, speed, timeout };
-        manager.SendMotor(Address, data);
+        Bridge.SendMotor(Address, data);
     }
 
 
@@ -66,7 +72,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x02, speed, timeout };
-        manager.SendMotor(Address, data);
+        Bridge.SendMotor(Address, data);
     }
 
 
@@ -75,7 +81,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x01, speed, timeout };
-        manager.SendMotor(Address, data);
+        Bridge.SendMotor(Address, data);
     }
 
 
@@ -84,7 +90,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x01, 0x01, 0x01, 0, 0x02, 0x01, 0 };
-        manager.SendMotor(Address, data);
+        Bridge.SendMotor(Address, data);
     }
 
 
@@ -100,7 +106,7 @@ public class Cube : MonoBehaviour
             writer.Write((ushort)0xffff);
             writer.Write((ushort)0xffff);
             writer.Write((ushort)((0x00 << 13) | angle));
-            manager.SendMotor(Address, stream.ToArray());
+            Bridge.SendMotor(Address, stream.ToArray());
         }
     }
 
@@ -201,7 +207,7 @@ public class Cube : MonoBehaviour
                     writer.Write(y);
                     writer.Write((ushort)(0x05 << 13));
                 }
-                manager.SendMotor(Address, stream.ToArray());
+                Bridge.SendMotor(Address, stream.ToArray());
             }
 
             yield return new WaitForSeconds(2f);
@@ -258,7 +264,7 @@ public class Cube : MonoBehaviour
     public void SetLamp(byte r, byte g, byte b)
     {
         byte[] data = { 0x03, 0x00, 0x01, 0x01, r, g, b };
-        manager.SendLamp(Address, data);
+        Bridge.SendLamp(Address, data);
     }
 
 
@@ -274,7 +280,7 @@ public class Cube : MonoBehaviour
         byte[] data = { 0x04, 0x00, 0x02,
                         duration, 0x01, 0x01, r, g, b,
                         duration, 0x01, 0x01, 0, 0, 0 };
-        manager.SendLamp(Address, data);
+        Bridge.SendLamp(Address, data);
     }
 
 
