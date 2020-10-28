@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using MQTTnet;
 using System;
 using System.IO;
 using System.Net.Sockets;
@@ -93,10 +92,10 @@ public class Bridge
     }
 
 
-    public void ConnectToCube(byte[] cubeAddress)
+    public void ConnectToCube(string cubeAddress)
     {
         ConnectingCube = true;
-        Publish($"{Address}/newcube", cubeAddress);
+        Publish($"{Address}/newcube", Encoding.UTF8.GetBytes(cubeAddress));
     }
 
 
@@ -128,12 +127,6 @@ public class Bridge
     public void SendLamp(string address, byte[] payload)
     {
         Publish(address + "/lamp", payload);
-    }
-
-
-    public void Publish(MqttApplicationMessage message)
-    {
-        Publish(message.Topic, message.Payload);
     }
 
 

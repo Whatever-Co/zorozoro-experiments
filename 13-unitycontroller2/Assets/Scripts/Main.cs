@@ -1,21 +1,12 @@
 using Microsoft.Extensions.Logging;
-using MQTTnet;
-using MQTTnet.Client;
-using MQTTnet.Client.Connecting;
-using MQTTnet.Client.Disconnecting;
-using MQTTnet.Client.Options;
-using MQTTnet.Client.Receiving;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using ZLogger;
 
 
-public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisconnectedHandler, IMqttApplicationMessageReceivedHandler
+public class Main : MonoBehaviour
 {
 
     private static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
@@ -25,95 +16,33 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     private CubeManager cubeManager;
     private List<Bridge> bridges;
 
-    // private Server server;
-    private IMqttClientOptions options;
-    private IMqttClient client;
-
     private TcpServer tcp;
 
 
-    async void Start()
+    void Start()
     {
         Application.targetFrameRate = 60;
 
         statusText.text = "Starting...";
 
-        // server = new Server();
-        // await server.Start();
-
-        client = new MqttFactory().CreateMqttClient();
-        client.UseConnectedHandler(this);
-        client.UseDisconnectedHandler(this);
-        client.UseApplicationMessageReceivedHandler(this);
-
-        options = new MqttClientOptionsBuilder()
-            .WithClientId("controller")
-            .WithTcpServer("localhost")
-            .WithCleanSession()
-            .Build();
-        await client.ConnectAsync(options);
-
         tcp = gameObject.GetComponent<TcpServer>();
         tcp.Connected += OnConnected;
+
+        var scanner = GetComponent<ScannerReceiver>();
+        scanner.OnNewCube += OnNewCube;
 
         bridges = new List<Bridge>();
 
         cubeManager = GetComponent<CubeManager>();
-        cubeManager.Publisher = client;
         cubeManager.TcpServer = tcp;
     }
 
 
-    public Task HandleConnectedAsync(MqttClientConnectedEventArgs eventArgs)
+    private void OnNewCube(string address)
     {
-        logger.ZLogDebug("Connected");
-        return Task.Run(async () =>
-        {
-            var topics = new[] { "newcube", "+/available", "+/connected", "+/disconnected", "+/position", "+/button", "+/battery" };
-            foreach (var t in topics)
-            {
-                await client.SubscribeAsync(new MqttTopicFilterBuilder().WithTopic(t).Build());
-                logger.ZLogDebug("Subscribed to topic: " + t);
-            }
-        });
-    }
-
-
-    public Task HandleDisconnectedAsync(MqttClientDisconnectedEventArgs eventArgs)
-    {
-        return Task.Run(async () =>
-        {
-            logger.ZLogDebug("### DISCONNECTED FROM SERVER ###");
-            await Task.Delay(System.TimeSpan.FromSeconds(5));
-            try
-            {
-                await client.ConnectAsync(options, CancellationToken.None);
-            }
-            catch
-            {
-                logger.ZLogDebug("### RECONNECTING FAILED ###");
-            }
-        });
-    }
-
-
-    public Task HandleApplicationMessageReceivedAsync(MqttApplicationMessageReceivedEventArgs e)
-    {
-        Dispatcher.runOnUiThread(() =>
-        {
-            var m = e.ApplicationMessage;
-            var payload = m.Payload != null ? Encoding.UTF8.GetString(m.Payload) : "";
-            logger.ZLogDebug($"Message received: Client = {e.ClientId}, Topic = {m.Topic}, Payload = {payload}");
-            switch (m.Topic)
-            {
-                case "newcube":
-                    var bridge = bridges.Where(b => !b.ConnectingCube).OrderByDescending(b => b.AvailableSlot).FirstOrDefault();
-                    Debug.LogWarning(bridge);
-                    bridge?.ConnectToCube(m.Payload);
-                    return;
-            }
-        });
-        return null;
+        var bridge = bridges.Where(b => !b.ConnectingCube).OrderByDescending(b => b.AvailableSlot).FirstOrDefault();
+        Debug.LogWarning(bridge);
+        bridge?.ConnectToCube(address);
     }
 
 
@@ -249,16 +178,12 @@ public class Main : MonoBehaviour, IMqttClientConnectedHandler, IMqttClientDisco
     }
 
 
-    async void OnApplicationQuit()
+    void OnApplicationQuit()
     {
         foreach (var bridge in bridges)
         {
             bridge.Stop();
         }
-        await client.DisconnectAsync();
-        client.Dispose();
-        client = null;
-        // await server.Stop();
         Debug.LogWarning("Application Quit");
     }
 

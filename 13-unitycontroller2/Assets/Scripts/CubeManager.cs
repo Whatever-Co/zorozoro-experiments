@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using MQTTnet;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -12,7 +11,6 @@ public class CubeManager : MonoBehaviour
     private static readonly ILogger<CubeManager> logger = LogManager.GetLogger<CubeManager>();
 
 
-    public IApplicationMessagePublisher Publisher { get; set; }
     public TcpServer TcpServer { get; set; }
     public Transform World;
 
