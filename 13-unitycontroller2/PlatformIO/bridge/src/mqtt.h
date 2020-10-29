@@ -33,7 +33,7 @@ class MQTTClient {
     void begin(const char hostname[], Client &client) {
         this->hostname = strdup(hostname);
         this->netClient = &client;
-        this->netClient->setTimeout(10 * 1000);  // 10sec...
+        // this->netClient->setTimeout(10 * 1000);  // 10sec...
     }
 
     void onMessageAdvanced(MQTTClientCallbackAdvanced cb) {

@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using UnityEngine;
 
 
@@ -20,22 +21,26 @@ public class TcpServer : MonoBehaviour
         var ip = IPAddress.Parse(ipAddress);
         listener = new TcpListener(ip, port);
         listener.Start();
-        listener.BeginAcceptSocket(DoAcceptTcpClientCallback, null);
-    }
-
-
-    private void DoAcceptTcpClientCallback(IAsyncResult ar)
-    {
-        var client = listener.EndAcceptTcpClient(ar);
-        print("Connect: " + client.Client.RemoteEndPoint);
-        var bridge = new Bridge(client);
-        Connected.Invoke(bridge);
+        Task.Run(() =>
+        {
+            while (listener != null)
+            {
+                var client = listener.AcceptTcpClient();
+                print("TcpServer: Accepted " + client.Client.RemoteEndPoint);
+                var bridge = new Bridge(client);
+                Connected.Invoke(bridge);
+            }
+        });
     }
 
 
     private void OnApplicationQuit()
     {
-        if (listener != null) listener.Stop();
+        if (listener != null)
+        {
+            listener.Stop();
+            listener = null;
+        }
     }
 
 }

@@ -26,12 +26,16 @@ public class Bridge
     private BinaryReader reader;
     private BinaryWriter writer;
 
+    private System.Diagnostics.Stopwatch stopwatch;
+    private double connectStart;
+
 
     public Bridge(TcpClient client)
     {
         this.client = client;
         Address = client.Client.RemoteEndPoint.ToString().Split(':')[0];
         OnMessage += HandleMessage;
+        stopwatch = System.Diagnostics.Stopwatch.StartNew();
     }
 
 
@@ -45,28 +49,38 @@ public class Bridge
             reader = new BinaryReader(stream);
             writer = new BinaryWriter(stream);
 
-            while (client.Connected)
+            try
             {
-                var len = reader.ReadByte();
-                var topicBytes = reader.ReadBytes(len);
-                var topic = Encoding.UTF8.GetString(topicBytes);
-                len = reader.ReadByte();
-                byte[] payload = { };
-                if (len > 0)
+                while (client.Connected)
                 {
-                    payload = reader.ReadBytes(len);
-                }
-                var token = topic.Split('/');
-                var address = token[0];
-                var command = token.Length > 1 ? token[1] : "";
-                Debug.Log($"address={address}, command={command}, payload={payload.Length}bytes");
-                OnMessage.Invoke(this, address, command, payload);
+                    if (client.Available > 0)
+                    {
+                        var len = reader.ReadByte();
+                        var topicBytes = reader.ReadBytes(len);
+                        var topic = Encoding.UTF8.GetString(topicBytes);
+                        len = reader.ReadByte();
+                        byte[] payload = { };
+                        if (len > 0)
+                        {
+                            payload = reader.ReadBytes(len);
+                        }
+                        var token = topic.Split('/');
+                        var address = token[0];
+                        var command = token.Length > 1 ? token[1] : "";
+                        Debug.Log($"address={address}, command={command}, payload={payload.Length}bytes");
+                        OnMessage.Invoke(this, address, command, payload);
+                    }
 
-                if (client.Client.Poll(1000, SelectMode.SelectRead) && (client.Client.Available == 0))
-                {
-                    Debug.Log("Disconnect: " + client.Client.RemoteEndPoint);
-                    break;
+                    if (client.Client.Poll(1000, SelectMode.SelectRead) && (client.Client.Available == 0))
+                    {
+                        Debug.LogWarning("Disconnect: " + client.Client.RemoteEndPoint);
+                        break;
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
             }
 
             writer.Dispose();
@@ -95,6 +109,7 @@ public class Bridge
     public void ConnectToCube(string cubeAddress)
     {
         ConnectingCube = true;
+        connectStart = stopwatch.Elapsed.TotalSeconds;
         Publish($"{Address}/newcube", Encoding.UTF8.GetBytes(cubeAddress));
     }
 
@@ -105,7 +120,11 @@ public class Bridge
         {
             case "available":
                 AvailableSlot = payload[0];
-                Debug.Log(this);
+                Debug.Log($"available: {this} {stopwatch.Elapsed.TotalSeconds - connectStart}");
+                if (stopwatch.Elapsed.TotalSeconds - connectStart > 5.0)
+                {
+                    ConnectingCube = false;
+                }
                 break;
 
             case "connected":

@@ -40,8 +40,8 @@ bool App::accept_new_cube_ = false;
 //----------------------------------------
 
 void App::Setup() {
-    SEGGER_RTT_Init();
-    SEGGER_RTT_printf(0, "Hello world\n");
+    // SEGGER_RTT_Init();
+    // SEGGER_RTT_printf(0, "Hello world\n");
 
     Serial.begin(115200);
 #ifdef WAIT_SERIAL_CONNECTION
@@ -96,8 +96,8 @@ void App::Loop() {
         ledOn(LED_RED);
         Serial.printf("disconnected? %d, %d\n", ethernet.connected(), ethernet.available());
         while (!mqtt.connected()) {
-            Serial.print("Attempting MQTT connection...");
-            // ethernet.stop();
+            Serial.print("Attempting connection...");
+            ethernet.stop();
             if (mqtt.connect(ip_address_.c_str())) {
                 Serial.println("connected");
                 StartAcceptNewCube();

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using System.Text;
 using UnityEngine;
 
@@ -15,7 +16,6 @@ public class ScannerReceiver : MonoBehaviour
     public event Action<string> OnNewCube;
 
     private TcpListener listener;
-    private TcpClient client;
 
 
     public void Start()
@@ -23,28 +23,36 @@ public class ScannerReceiver : MonoBehaviour
         var ip = IPAddress.Parse(ipAddress);
         listener = new TcpListener(ip, port);
         listener.Start();
-        listener.BeginAcceptSocket(DoAcceptTcpClientCallback, null);
+        Task.Run(() =>
+        {
+            while (listener != null)
+            {
+                var client = listener.AcceptTcpClient();
+                print("Connect: " + client.Client.RemoteEndPoint);
+                Task.Run(() => DoAcceptTcpClientCallback(client));
+            }
+        });
     }
 
 
-    private void DoAcceptTcpClientCallback(IAsyncResult ar)
+    private void DoAcceptTcpClientCallback(TcpClient client)
     {
-        client = listener.EndAcceptTcpClient(ar);
-        print("Connect: " + client.Client.RemoteEndPoint);
-
         var stream = client.GetStream();
         var reader = new BinaryReader(stream);
 
         while (client.Connected)
         {
-            var command = reader.ReadString();
-            var address = reader.ReadString();
-            Debug.Log($"command={command}, address={address}");
-            OnNewCube.Invoke(address);
+            if (client.Available > 0)
+            {
+                var command = reader.ReadString();
+                var address = reader.ReadString();
+                Debug.Log($"command={command}, address={address}");
+                OnNewCube.Invoke(address);
+            }
 
             if (client.Client.Poll(1000, SelectMode.SelectRead) && (client.Client.Available == 0))
             {
-                Debug.Log("Disconnect: " + client.Client.RemoteEndPoint);
+                Debug.LogWarning("Disconnect: " + client.Client.RemoteEndPoint);
                 break;
             }
         }
@@ -58,8 +66,11 @@ public class ScannerReceiver : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        if (listener != null) listener.Stop();
-        if (client != null) client.Close();
+        if (listener != null)
+        {
+            listener.Stop();
+            listener = null;
+        };
     }
 
 }

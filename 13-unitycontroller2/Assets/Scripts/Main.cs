@@ -41,7 +41,7 @@ public class Main : MonoBehaviour
     private void OnNewCube(string address)
     {
         var bridge = bridges.Where(b => !b.ConnectingCube).OrderByDescending(b => b.AvailableSlot).FirstOrDefault();
-        Debug.LogWarning(bridge);
+        // Debug.LogWarning(bridge);
         bridge?.ConnectToCube(address);
     }
 
