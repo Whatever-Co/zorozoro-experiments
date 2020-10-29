@@ -15,6 +15,7 @@ public class ScannerReceiver : MonoBehaviour
     public event Action<string> OnNewCube;
 
     private TcpListener listener;
+    private TcpClient client;
 
 
     public void Start()
@@ -25,7 +26,7 @@ public class ScannerReceiver : MonoBehaviour
         {
             while (listener != null)
             {
-                var client = listener.AcceptTcpClient();
+                client = listener.AcceptTcpClient();
                 print("Scanner connection accepted: " + client.Client.RemoteEndPoint);
                 Task.Run(() => DoAcceptTcpClientCallback(client));
             }
@@ -69,6 +70,11 @@ public class ScannerReceiver : MonoBehaviour
             listener.Stop();
             listener = null;
         };
+        if (client != null)
+        {
+            client.Close();
+            client = null;
+        }
     }
 
 }
