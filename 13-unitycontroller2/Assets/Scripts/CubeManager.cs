@@ -11,25 +11,25 @@ public class CubeManager : MonoBehaviour
     private static readonly ILogger<CubeManager> logger = LogManager.GetLogger<CubeManager>();
 
 
-    public TcpServer TcpServer { get; set; }
+    public BridgeManager BridgeManager { get; set; }
     public Transform World;
 
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
 
 
-    public Cube AddCube(string address, Bridge bridge)
+    public Cube AddCube(string cubeAddress, string bridgeAddress)
     {
-        if (cubes.TryGetValue(address, out var cube))
+        if (cubes.TryGetValue(cubeAddress, out var cube))
         {
+            cube.BridgeAddress = bridgeAddress;
             return cube;
         }
 
         var prefab = Resources.Load<GameObject>("Prefabs/Cube");
         cube = UnityEngine.Object.Instantiate((prefab).GetComponent<Cube>());
-        cube.name = address;
-        cube.Init(address, bridge);
+        cube.Init(cubeAddress, bridgeAddress, BridgeManager);
         cube.transform.SetParent(World, false);
-        cubes.Add(address, cube);
+        cubes.Add(cubeAddress, cube);
         return cube;
     }
 

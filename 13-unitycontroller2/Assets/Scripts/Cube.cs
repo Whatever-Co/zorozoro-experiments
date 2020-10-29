@@ -16,12 +16,12 @@ public class Cube : MonoBehaviour
 
 
     public string Address { get; private set; }
-    public bool IsConnected { get; private set; }
+    public string BridgeAddress { get; set; }
+    private BridgeManager bridgeManager;
 
     public int Battery { get; private set; } = -1;
     public float LastBatteryTime { get; private set; } = 0;
 
-    public Bridge Bridge { get; private set; }
 
     private Vector2 currentMatPosition;
     public float LastPositionTime { get; private set; } = 0;
@@ -32,17 +32,18 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void Init(string address, Bridge bridge)
+    public void Init(string cubeAddress, string bridgeAddress, BridgeManager bridgeManager)
     {
-        Address = address;
-        Bridge = bridge;
-        IsConnected = false;
+        gameObject.name = cubeAddress;
+        Address = cubeAddress;
+        BridgeAddress = bridgeAddress;
+        this.bridgeManager = bridgeManager;
     }
 
 
     void OnDestroy()
     {
-        Bridge = null;
+        bridgeManager = null;
     }
 
 
@@ -51,7 +52,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x01, speed, timeout };
-        Bridge.SendMotor(Address, data);
+        bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
     }
 
 
@@ -60,7 +61,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x02, speed, timeout };
-        Bridge.SendMotor(Address, data);
+        bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
     }
 
 
@@ -69,7 +70,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x02, speed, timeout };
-        Bridge.SendMotor(Address, data);
+        bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
     }
 
 
@@ -78,7 +79,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x01, speed, timeout };
-        Bridge.SendMotor(Address, data);
+        bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
     }
 
 
@@ -87,7 +88,7 @@ public class Cube : MonoBehaviour
         DisableGoAround();
 
         byte[] data = { 0x01, 0x01, 0x01, 0, 0x02, 0x01, 0 };
-        Bridge.SendMotor(Address, data);
+        bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
     }
 
 
@@ -103,7 +104,7 @@ public class Cube : MonoBehaviour
             writer.Write((ushort)0xffff);
             writer.Write((ushort)0xffff);
             writer.Write((ushort)((0x00 << 13) | angle));
-            Bridge.SendMotor(Address, stream.ToArray());
+            bridgeManager.SendMotorCommand(BridgeAddress, Address, stream.ToArray());
         }
     }
 
@@ -204,7 +205,7 @@ public class Cube : MonoBehaviour
                     writer.Write(y);
                     writer.Write((ushort)(0x05 << 13));
                 }
-                Bridge.SendMotor(Address, stream.ToArray());
+                bridgeManager.SendMotorCommand(BridgeAddress, Address, stream.ToArray());
             }
 
             yield return new WaitForSeconds(2f);
@@ -261,7 +262,7 @@ public class Cube : MonoBehaviour
     public void SetLamp(byte r, byte g, byte b)
     {
         byte[] data = { 0x03, 0x00, 0x01, 0x01, r, g, b };
-        Bridge.SendLamp(Address, data);
+        bridgeManager.SendLampCommand(BridgeAddress, Address, data);
     }
 
 
@@ -277,7 +278,7 @@ public class Cube : MonoBehaviour
         byte[] data = { 0x04, 0x00, 0x02,
                         duration, 0x01, 0x01, r, g, b,
                         duration, 0x01, 0x01, 0, 0, 0 };
-        Bridge.SendLamp(Address, data);
+        bridgeManager.SendLampCommand(BridgeAddress, Address, data);
     }
 
 
@@ -320,6 +321,6 @@ public class Cube : MonoBehaviour
     }
 
 
-    public override string ToString() => $"[Cube Address={Address} IsConnected={IsConnected}]";
+    public override string ToString() => $"[Cube Address={Address} Bridge={BridgeAddress}]";
 
 }

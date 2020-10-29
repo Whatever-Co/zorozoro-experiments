@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using ZLogger;
@@ -14,9 +12,7 @@ public class Main : MonoBehaviour
     public Text statusText;
 
     private CubeManager cubeManager;
-    private List<Bridge> bridges;
-
-    private TcpServer tcp;
+    private BridgeManager bridgeManager;
 
 
     void Start()
@@ -25,66 +21,38 @@ public class Main : MonoBehaviour
 
         statusText.text = "Starting...";
 
-        tcp = gameObject.GetComponent<TcpServer>();
-        tcp.Connected += OnConnected;
+        bridgeManager = gameObject.GetComponent<BridgeManager>();
+        bridgeManager.OnMessage += HandleMessage;
 
         var scanner = GetComponent<ScannerReceiver>();
-        scanner.OnNewCube += OnNewCube;
-
-        bridges = new List<Bridge>();
+        scanner.OnNewCube += bridgeManager.ConnectToCube;
 
         cubeManager = GetComponent<CubeManager>();
-        cubeManager.TcpServer = tcp;
+        cubeManager.BridgeManager = bridgeManager;
     }
 
 
-    private void OnNewCube(string address)
-    {
-        var bridge = bridges.Where(b => !b.ConnectingCube).OrderByDescending(b => b.AvailableSlot).FirstOrDefault();
-        // Debug.LogWarning(bridge);
-        bridge?.ConnectToCube(address);
-    }
-
-
-    private void OnConnected(Bridge bridge)
-    {
-        Debug.Log("OnConnected");
-        bridge.OnMessage += OnMessage;
-        bridge.OnDisconnected += OnDisconnected;
-        bridge.Start();
-        bridges.Add(bridge);
-    }
-
-
-    private void OnDisconnected(Bridge bridge)
-    {
-        Debug.Log("OnDisconnected");
-        bridge.OnDisconnected -= OnDisconnected;
-        bridges.Remove(bridge);
-    }
-
-
-    private void OnMessage(Bridge bridge, string address, string command, byte[] payload)
+    private void HandleMessage(string bridgeAddress, string cubeAddress, string command, byte[] payload)
     {
         Dispatcher.runOnUiThread(() =>
         {
             switch (command)
             {
                 case "connected":
-                    var cube = cubeManager.AddCube(address, bridge);
+                    var cube = cubeManager.AddCube(cubeAddress, bridgeAddress);
                     Debug.Log(cube);
                     break;
 
                 case "disconnected":
-                    cubeManager.RemoveCube(address);
+                    cubeManager.RemoveCube(cubeAddress);
                     break;
 
                 case "position":
-                    cubeManager.NotifyPosition(address, payload);
+                    cubeManager.NotifyPosition(cubeAddress, payload);
                     break;
 
                 case "battery":
-                    cubeManager.NotifyBattery(address, payload[0]);
+                    cubeManager.NotifyBattery(cubeAddress, payload[0]);
                     break;
             }
         });
@@ -175,16 +143,6 @@ public class Main : MonoBehaviour
     public void GoAround()
     {
         cubeManager.GoAround();
-    }
-
-
-    void OnApplicationQuit()
-    {
-        foreach (var bridge in bridges)
-        {
-            bridge.Stop();
-        }
-        Debug.LogWarning("Application Quit");
     }
 
 }

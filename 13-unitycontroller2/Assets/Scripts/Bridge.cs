@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
@@ -33,7 +34,7 @@ public class Bridge
     public Bridge(TcpClient client)
     {
         this.client = client;
-        Address = client.Client.RemoteEndPoint.ToString().Split(':')[0];
+        Address = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
         OnMessage += HandleMessage;
         stopwatch = System.Diagnostics.Stopwatch.StartNew();
     }
@@ -137,13 +138,13 @@ public class Bridge
     }
 
 
-    public void SendMotor(string address, byte[] payload)
+    public void SendMotorCommand(string address, byte[] payload)
     {
         Publish(address + "/motor", payload);
     }
 
 
-    public void SendLamp(string address, byte[] payload)
+    public void SendLampCommand(string address, byte[] payload)
     {
         Publish(address + "/lamp", payload);
     }

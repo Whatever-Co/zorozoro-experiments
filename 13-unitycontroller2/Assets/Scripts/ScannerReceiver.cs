@@ -3,15 +3,14 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using System.Text;
 using UnityEngine;
 
 
 public class ScannerReceiver : MonoBehaviour
 {
 
-    public string ipAddress = "0.0.0.0";
-    public int port = 11122;
+    private readonly IPAddress SERVER_ADDRESS = IPAddress.Any;
+    private readonly int SERVER_PORT = 11122;
 
     public event Action<string> OnNewCube;
 
@@ -20,15 +19,14 @@ public class ScannerReceiver : MonoBehaviour
 
     public void Start()
     {
-        var ip = IPAddress.Parse(ipAddress);
-        listener = new TcpListener(ip, port);
+        listener = new TcpListener(SERVER_ADDRESS, SERVER_PORT);
         listener.Start();
         Task.Run(() =>
         {
             while (listener != null)
             {
                 var client = listener.AcceptTcpClient();
-                print("Connect: " + client.Client.RemoteEndPoint);
+                print("Scanner connection accepted: " + client.Client.RemoteEndPoint);
                 Task.Run(() => DoAcceptTcpClientCallback(client));
             }
         });
