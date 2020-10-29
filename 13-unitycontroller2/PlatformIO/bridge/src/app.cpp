@@ -214,15 +214,17 @@ void App::OnConnect(uint16_t conn_handle) {
 void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
     Serial.printf("Disconnected, %d, reason = 0x%02X\n", conn_handle, reason);
 
-    auto address = CubeManager::GetAddress(conn_handle);
+    if (reason != 0x3e){
+        auto address = CubeManager::GetAddress(conn_handle);
 
-    UnsubscribeTopics(address);
+        UnsubscribeTopics(address);
 
-    // char topic[32];
-    // sprintf(topic, "%s/disconnected", address.c_str());
-    String topic = address + "/disconnected";
-    mqtt.publish(topic, "", false, 1);
-    Serial.printf("Published: %s\n", topic);
+        // char topic[32];
+        // sprintf(topic, "%s/disconnected", address.c_str());
+        String topic = address + "/disconnected";
+        mqtt.publish(topic, "", false, 1);
+        Serial.printf("Published: %s\n", topic);
+    }
 
     CubeManager::Cleanup(conn_handle);
 
