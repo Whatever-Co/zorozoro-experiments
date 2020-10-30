@@ -6,7 +6,7 @@
 #include <memory>
 
 // #define ENABLE_SENSOR
-// #define ENABLE_LAMP
+#define ENABLE_LAMP
 #define ENABLE_BATTERY
 
 #include "app.h"
@@ -58,10 +58,6 @@ class Cube {
     }
 
     bool Setup(uint8_t conn_handle) {
-        this->conn_handle_ = conn_handle;
-        auto addr = Bluefruit.Connection(conn_handle)->getPeerAddr();
-        address_ = Address::ToString(addr);
-
         Serial.print("Discovering toio Service ... ");
         service_ = std::make_shared<BLEClientService>(ServiceUUID);
         service_->begin();
@@ -150,6 +146,12 @@ class Cube {
         lamp_control_->SetColor(255, 255, 255);
 #endif
         // motor_control_->Test();
+
+        this->conn_handle_ = conn_handle;
+        auto addr = Bluefruit.Connection(conn_handle)->getPeerAddr();
+        address_ = Address::ToString(addr);
+        Serial.printf("Setup done %s\n", address_.c_str());
+
         return true;
     }
 

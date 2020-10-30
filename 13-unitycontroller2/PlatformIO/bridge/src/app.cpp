@@ -142,7 +142,7 @@ void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t le
     char topic[32];
     sprintf(topic, "%s/battery", cube->GetAddress().c_str());
     char value = data[0];
-    // mqtt.publish(topic, &value, 1);
+    mqtt.publish(topic, &value, 1);
     // Serial.printf("Published: %s,%d\n", topic, value);
 }
 
@@ -214,14 +214,13 @@ void App::OnConnect(uint16_t conn_handle) {
 void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
     Serial.printf("Disconnected, %d, reason = 0x%02X\n", conn_handle, reason);
 
-    if (reason != 0x3e){
+    if (reason != 0x3e) {
         auto address = CubeManager::GetAddress(conn_handle);
 
         UnsubscribeTopics(address);
 
-        // char topic[32];
-        // sprintf(topic, "%s/disconnected", address.c_str());
-        String topic = address + "/disconnected";
+        char topic[32];
+        sprintf(topic, "%s/disconnected", address.c_str());
         mqtt.publish(topic, "", false, 1);
         Serial.printf("Published: %s\n", topic);
     }
