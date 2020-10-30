@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,10 +6,14 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using UnityEngine;
+using ZLogger;
 
 
 public class BridgeManager : MonoBehaviour
 {
+
+    private static readonly ILogger<BridgeManager> logger = LogManager.GetLogger<BridgeManager>();
+
 
     private readonly IPAddress SERVER_ADDRESS = IPAddress.Any;
     private readonly int SERVER_PORT = 11111;
@@ -17,6 +22,8 @@ public class BridgeManager : MonoBehaviour
 
     private TcpListener listener;
     private Dictionary<string, Bridge> bridges = new Dictionary<string, Bridge>();
+
+    public int BridgeCount { get => bridges.Count(); }
 
 
     public void Start()
@@ -30,7 +37,7 @@ public class BridgeManager : MonoBehaviour
                 var client = listener.AcceptTcpClient();
                 var endPoint = client.Client.RemoteEndPoint as IPEndPoint;
                 var address = endPoint.Address.ToString();
-                print("Bridge connection accepted: " + endPoint);
+                logger.ZLogDebug("Bridge connection accepted: {0}", endPoint);
 
                 Bridge bridge;
                 if (bridges.ContainsKey(address))
@@ -53,7 +60,7 @@ public class BridgeManager : MonoBehaviour
     public void ConnectToCube(string address)
     {
         var kv = bridges.Where(x => !x.Value.ConnectingCube).OrderByDescending(x => x.Value.AvailableSlot).FirstOrDefault();
-        // Debug.LogWarning(kv);
+        // logger.ZLogWarning(kv);
         kv.Value?.ConnectToCube(address);
     }
 
@@ -62,7 +69,7 @@ public class BridgeManager : MonoBehaviour
     {
         if (!bridges.ContainsKey(bridgeAddress))
         {
-            Debug.LogWarning($"SendMotorCommand: No bridge found with address {bridgeAddress} for {cubeAddress}");
+            logger.ZLogWarning($"SendMotorCommand: No bridge found with address {bridgeAddress} for {cubeAddress}");
             return;
         }
         bridges[bridgeAddress].SendMotorCommand(cubeAddress, payload);
@@ -73,7 +80,7 @@ public class BridgeManager : MonoBehaviour
     {
         if (!bridges.ContainsKey(bridgeAddress))
         {
-            Debug.LogWarning($"SendLampCommand: No bridge found with address {bridgeAddress} for {cubeAddress}");
+            logger.ZLogWarning($"SendLampCommand: No bridge found with address {bridgeAddress} for {cubeAddress}");
             return;
         }
         bridges[bridgeAddress].SendLampCommand(cubeAddress, payload);

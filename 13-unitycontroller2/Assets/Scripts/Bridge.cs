@@ -44,7 +44,7 @@ public class Bridge
     {
         Task.Run(() =>
         {
-            Debug.Log($"Start: {this}");
+            logger.ZLogDebug($"Start: {this}");
 
             stream = client.GetStream();
             reader = new BinaryReader(stream);
@@ -68,20 +68,20 @@ public class Bridge
                         var token = topic.Split('/');
                         var address = token[0];
                         var command = token.Length > 1 ? token[1] : "";
-                        Debug.Log($"address={address}, command={command}, payload={payload.Length}bytes");
+                        logger.ZLogDebug($"address={address}, command={command}, payload={payload.Length}bytes");
                         OnMessage.Invoke(this, address, command, payload);
                     }
 
                     if (client.Client.Poll(1000, SelectMode.SelectRead) && (client.Client.Available == 0))
                     {
-                        Debug.LogWarning("Disconnect: " + client.Client.RemoteEndPoint);
+                        logger.ZLogWarning("Disconnect: " + client.Client.RemoteEndPoint);
                         break;
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.LogException(e);
+                logger.ZLogError(e.ToString());
             }
 
             writer.Dispose();
@@ -93,7 +93,7 @@ public class Bridge
 
             OnDisconnected?.Invoke(this);
 
-            Debug.Log($"Done: {this}");
+            logger.ZLogDebug($"Done: {this}");
         });
     }
 
@@ -121,7 +121,7 @@ public class Bridge
         {
             case "available":
                 AvailableSlot = payload[0];
-                Debug.Log($"available: {this} {stopwatch.Elapsed.TotalSeconds - connectStart}");
+                logger.ZLogDebug($"available: {this} {stopwatch.Elapsed.TotalSeconds - connectStart}");
                 if (stopwatch.Elapsed.TotalSeconds - connectStart > 5.0)
                 {
                     ConnectingCube = false;

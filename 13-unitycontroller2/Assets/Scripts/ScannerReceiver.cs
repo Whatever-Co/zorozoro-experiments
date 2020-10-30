@@ -1,13 +1,18 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using UnityEngine;
+using ZLogger;
 
 
 public class ScannerReceiver : MonoBehaviour
 {
+
+    private static readonly ILogger<ScannerReceiver> logger = LogManager.GetLogger<ScannerReceiver>();
+
 
     private readonly IPAddress SERVER_ADDRESS = IPAddress.Any;
     private readonly int SERVER_PORT = 11122;
@@ -27,7 +32,7 @@ public class ScannerReceiver : MonoBehaviour
             while (listener != null)
             {
                 client = listener.AcceptTcpClient();
-                print("Scanner connection accepted: " + client.Client.RemoteEndPoint);
+                logger.ZLogDebug("Scanner connection accepted: {0}", client.Client.RemoteEndPoint);
                 Task.Run(() => DoAcceptTcpClientCallback(client));
             }
         });
@@ -45,13 +50,13 @@ public class ScannerReceiver : MonoBehaviour
             {
                 var command = reader.ReadString();
                 var address = reader.ReadString();
-                Debug.Log($"command={command}, address={address}");
+                logger.ZLogDebug($"command={command}, address={address}");
                 OnNewCube.Invoke(address);
             }
 
             if (client.Client.Poll(1000, SelectMode.SelectRead) && (client.Client.Available == 0))
             {
-                Debug.LogWarning("Disconnect: " + client.Client.RemoteEndPoint);
+                logger.ZLogWarning("Disconnect: " + client.Client.RemoteEndPoint);
                 break;
             }
         }

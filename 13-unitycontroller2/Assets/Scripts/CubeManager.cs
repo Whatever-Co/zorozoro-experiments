@@ -16,6 +16,8 @@ public class CubeManager : MonoBehaviour
 
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
 
+    public int CubeCount { get => cubes.Count(); }
+
 
     public Cube AddCube(string cubeAddress, string bridgeAddress)
     {
@@ -137,7 +139,6 @@ public class CubeManager : MonoBehaviour
 
     public void NotifyBattery(string address, int value)
     {
-        // logger.ZLogTrace("Setting battery of {0} to {1}", address, value);
         var cube = GetCube(address);
         cube?.NotifyBattery(value);
     }
@@ -160,15 +161,5 @@ public class CubeManager : MonoBehaviour
         }
     }
 
-
-    public int ConnectedCubeCount
-    {
-        get
-        {
-            var t = Time.realtimeSinceStartup;
-            return cubes.Where(kv => t - kv.Value.LastBatteryTime < 8f).Count();
-        }
-
-    }
 
 }

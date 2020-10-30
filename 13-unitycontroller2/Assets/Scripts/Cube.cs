@@ -8,6 +8,9 @@ using ZLogger;
 public class Cube : MonoBehaviour
 {
 
+    static readonly ILogger<Cube> logger = LogManager.GetLogger<Cube>();
+
+
     public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
     public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
     public static readonly Vector2 MAT_CENTER = (MAT_MIN + MAT_MAX) / 2;
@@ -129,7 +132,7 @@ public class Cube : MonoBehaviour
         }
         goingAroundNow = true;
 
-        Debug.LogWarning($"currentMatPosition={currentMatPosition} dist={Vector2.Distance(currentMatPosition, Vector2.zero)}, LastPositionTime={LastPositionTime}, dt={Time.realtimeSinceStartup - LastPositionTime}");
+        logger.ZLogWarning($"currentMatPosition={currentMatPosition} dist={Vector2.Distance(currentMatPosition, Vector2.zero)}, LastPositionTime={LastPositionTime}, dt={Time.realtimeSinceStartup - LastPositionTime}");
 
         if (IsOnSheet)
         {
@@ -160,7 +163,7 @@ public class Cube : MonoBehaviour
         // radius = 90;
         speed = (byte)Mathf.FloorToInt(radius / 5f);
         radius = speed * 5;
-        Debug.LogWarning($"radius={radius}, speed={speed}");
+        logger.ZLogWarning("radius={0}, speed={1}", radius, speed);
         coroutine = StartCoroutine(_GoAround());
     }
 
@@ -183,7 +186,7 @@ public class Cube : MonoBehaviour
             // L = 2 PI R
             // var dist = 2 * Mathf.PI * radius * A / 360f;
             // float A = DIST / (2 * Mathf.PI * radius) * 360;
-            // Debug.LogWarning($"radius={radius}, DIST={DIST}, A={A}");
+            // logger.ZLogWarning($"radius={radius}, DIST={DIST}, A={A}");
 
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
@@ -193,14 +196,14 @@ public class Cube : MonoBehaviour
 
                 var p = currentMatPosition - MAT_CENTER;
                 var startAngle = Mathf.Atan2(p.y, p.x);
-                Debug.LogWarning($"t={Time.realtimeSinceStartup}, a={startAngle * Mathf.Rad2Deg}");
+                logger.ZLogWarning($"t={Time.realtimeSinceStartup}, a={startAngle * Mathf.Rad2Deg}");
                 // var radius = Vector2.Distance(currentMatPosition, MAT_CENTER);
                 for (int i = 1; i <= 2; i++)
                 {
                     var a = startAngle + i / 2f * A * Mathf.Deg2Rad;
                     ushort x = (ushort)(Mathf.Cos(a) * radius + MAT_CENTER.x);
                     ushort y = (ushort)(Mathf.Sin(a) * radius + MAT_CENTER.y);
-                    Debug.LogWarning($"a={a * Mathf.Rad2Deg}, x={x}, y={y}");
+                    logger.ZLogWarning($"a={a * Mathf.Rad2Deg}, x={x}, y={y}");
                     writer.Write(x);
                     writer.Write(y);
                     writer.Write((ushort)(0x05 << 13));

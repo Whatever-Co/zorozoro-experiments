@@ -40,7 +40,7 @@ public class Main : MonoBehaviour
             {
                 case "connected":
                     var cube = cubeManager.AddCube(cubeAddress, bridgeAddress);
-                    Debug.Log(cube);
+                    logger.ZLogTrace(cube.ToString());
                     break;
 
                 case "disconnected":
@@ -63,7 +63,7 @@ public class Main : MonoBehaviour
     {
         if (Time.frameCount % 120 == 0)
         {
-            statusText.text = $"{cubeManager.ConnectedCubeCount} cubes connected.";
+            statusText.text = $"{bridgeManager.BridgeCount} bridges, {cubeManager.CubeCount} cubes connected.";
         }
 
         if (Input.GetKeyDown(KeyCode.Alpha1))
