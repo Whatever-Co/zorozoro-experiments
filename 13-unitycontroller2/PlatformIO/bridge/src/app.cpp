@@ -28,8 +28,6 @@ static Adafruit_NeoPixel pixels(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
 static uint32_t colors[MAX_CUBES + 1] = {0xff0000, 0xf7215b, 0x15f8c2, 0xf7e411, 0xa312f7,
                                          0x4970ff, 0xfc8c00, 0x2ee236, 0xf954d7, 0xa7f9ff, 0x000000};
 
-static const char *requiredTopics[] = {"motor", "lamp"};
-
 static Chrono myChrono;
 
 //----------------------------------------
@@ -82,7 +80,7 @@ void App::Setup() {
     Serial.println(ip_address_);
 
     mqtt.begin(CONTROLLER_HOST, ethernet);
-    mqtt.onMessageAdvanced(OnMessage);
+    mqtt.setCallback(OnMessage);
 
     Serial.println("ready...");
 
@@ -98,12 +96,9 @@ void App::Loop() {
         while (!mqtt.connected()) {
             Serial.print("Attempting connection...");
             ethernet.stop();
-            if (mqtt.connect(ip_address_.c_str())) {
+            if (mqtt.connect()) {
                 Serial.println("connected");
                 StartAcceptNewCube();
-                for (auto &addr : CubeManager::GetAddresses()) {
-                    SubscribeTopics(addr);
-                }
                 myChrono.restart();
             } else {
                 Serial.println("failed, try again in 3 seconds");
@@ -146,7 +141,7 @@ void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t le
     // Serial.printf("Published: %s,%d\n", topic, value);
 }
 
-void App::OnMessage(MQTTClient *client, char topic[], char payload[], int length) {
+void App::OnMessage(char topic[], char payload[], int length) {
     // Serial.print("Message received [");
     // Serial.print(topic);
     // Serial.print("] ");
@@ -199,11 +194,9 @@ void App::OnConnect(uint16_t conn_handle) {
     auto cube = CubeManager::Setup(conn_handle);
     if (cube) {
         auto address = cube->GetAddress();
-        SubscribeTopics(address);
-
         char topic[32];
         sprintf(topic, "%s/connected", address.c_str());
-        mqtt.publish(topic, "", false, 1);
+        mqtt.publish(topic, nullptr, 0);
         Serial.printf("Published: %s\n", topic);
     }
 
@@ -216,12 +209,9 @@ void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
 
     if (reason != 0x3e) {
         auto address = CubeManager::GetAddress(conn_handle);
-
-        UnsubscribeTopics(address);
-
         char topic[32];
         sprintf(topic, "%s/disconnected", address.c_str());
-        mqtt.publish(topic, "", false, 1);
+        mqtt.publish(topic, nullptr, 0);
         Serial.printf("Published: %s\n", topic);
     }
 
@@ -236,19 +226,15 @@ void App::StartAcceptNewCube() {
         // Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
         return;
     }
-    auto topic = ip_address_ + "/newcube";
-    mqtt.subscribe(topic);
-    topic = ip_address_ + "/available";
+    auto topic = ip_address_ + "/available";
     char available = MAX_CUBES - CubeManager::GetNumCubes();
-    mqtt.publish(topic.c_str(), &available, 1, false, 1);
-    Serial.println("Start accept new cube");
+    mqtt.publish(topic.c_str(), &available, 1);
     accept_new_cube_ = true;
+    Serial.println("Start accept new cube");
 }
 
 void App::StopAcceptNewCube() {
     accept_new_cube_ = false;
-    auto topic = ip_address_ + "/newcube";
-    mqtt.unsubscribe(topic);
     Serial.println("Stop accept new cube");
 }
 
@@ -261,24 +247,6 @@ bool App::ConnectToCube(String address) {
     auto addr = Address::FromString(address);
     Bluefruit.Central.connect(&addr);
     return true;
-}
-
-void App::SubscribeTopics(String address) {
-    char topic[32];
-    for (auto t : requiredTopics) {
-        sprintf(topic, "%s/%s", address.c_str(), t);
-        mqtt.subscribe(topic);
-        Serial.printf("Subscribed: %s\n", topic);
-    }
-}
-
-void App::UnsubscribeTopics(String address) {
-    char topic[32];
-    for (auto t : requiredTopics) {
-        sprintf(topic, "%s/%s", address.c_str(), t);
-        mqtt.unsubscribe(topic);
-        Serial.printf("Unsubscribed: %s\n", topic);
-    }
 }
 
 void App::UpdateStatusLED() {

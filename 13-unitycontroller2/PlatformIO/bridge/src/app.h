@@ -14,7 +14,7 @@ class App {
     static void OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t length);
 
    private:
-    static void OnMessage(MQTTClient *client, char topic[], char payload[], int length);
+    static void OnMessage(char topic[], char payload[], int length);
     static void OnConnect(uint16_t conn_handle);
     static void OnDisconnect(uint16_t conn_handle, uint8_t reason);
 
@@ -22,9 +22,6 @@ class App {
     static void StopAcceptNewCube();
 
     static bool ConnectToCube(String address);
-
-    static void SubscribeTopics(String address);
-    static void UnsubscribeTopics(String address);
 
     static void UpdateStatusLED();
 
