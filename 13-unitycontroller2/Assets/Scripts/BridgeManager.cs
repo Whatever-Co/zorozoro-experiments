@@ -53,7 +53,7 @@ public class BridgeManager : MonoBehaviour
     public void ConnectToCube(string address)
     {
         var kv = bridges.Where(x => !x.Value.ConnectingCube).OrderByDescending(x => x.Value.AvailableSlot).FirstOrDefault();
-        Debug.LogWarning(kv);
+        // Debug.LogWarning(kv);
         kv.Value?.ConnectToCube(address);
     }
 

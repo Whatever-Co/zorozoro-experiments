@@ -19,7 +19,7 @@ public class Cube : MonoBehaviour
     public string BridgeAddress { get; set; }
     private BridgeManager bridgeManager;
 
-    public int Battery { get; private set; } = -1;
+    public int Battery { get; set; } = -1;
     public float LastBatteryTime { get; private set; } = 0;
 
 

@@ -22,6 +22,7 @@ public class CubeManager : MonoBehaviour
         if (cubes.TryGetValue(cubeAddress, out var cube))
         {
             cube.BridgeAddress = bridgeAddress;
+            cube.Battery = -1;
             return cube;
         }
 
