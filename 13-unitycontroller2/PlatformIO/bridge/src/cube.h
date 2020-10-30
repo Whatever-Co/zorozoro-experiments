@@ -134,8 +134,8 @@ class Cube {
             Serial.println("No Characteristic Found. Characteristic is mandatory but not found. ");
             return false;
         }
-        configuration_->setNotifyCallback(&App::OnMotor);
-        configuration_->enableNotify();
+        // configuration_->setNotifyCallback(&App::OnMotor);
+        // configuration_->enableNotify();
         Serial.println("Characteristic Found");
         {
             uint8_t data[] = {0x18, 0x00, 20, 0x01};

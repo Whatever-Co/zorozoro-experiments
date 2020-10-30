@@ -138,7 +138,7 @@ void App::OnBatteryInfo(BLEClientCharacteristic *chr, uint8_t *data, uint16_t le
     sprintf(topic, "%s/battery", cube->GetAddress().c_str());
     char value = data[0];
     mqtt.publish(topic, &value, 1);
-    // Serial.printf("Published: %s,%d\n", topic, value);
+    Serial.printf("Published: %s,%d\n", topic, value);
 }
 
 void App::OnMessage(char topic[], char payload[], int length) {
