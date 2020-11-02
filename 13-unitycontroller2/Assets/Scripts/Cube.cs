@@ -161,10 +161,12 @@ public class Cube : MonoBehaviour
             return;
         }
 
-        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), 30, 90);
+        const float MIN_R = 50;
+        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), MIN_R, 300);
+        radius = Mathf.FloorToInt((radius - MIN_R) / 35) * 35 + MIN_R;
         // radius = 90;
-        speed = (byte)Mathf.FloorToInt(radius / 5f);
-        radius = speed * 5;
+        // speed = (byte)Mathf.FloorToInt(radius / 5f);
+        // radius = speed * 5;
         logger.ZLogWarning("radius={0}, speed={1}", radius, speed);
         coroutine = StartCoroutine(_GoAround());
     }
@@ -183,17 +185,17 @@ public class Cube : MonoBehaviour
     {
         while (true)
         {
-            // const float DIST = 100f;
-            const float A = 60f;
+            const float DIST = 100f;
+            // const float A = 60f;
             // L = 2 PI R
             // var dist = 2 * Mathf.PI * radius * A / 360f;
-            // float A = DIST / (2 * Mathf.PI * radius) * 360;
-            // logger.ZLogWarning($"radius={radius}, DIST={DIST}, A={A}");
+            float A = DIST / (2 * Mathf.PI * radius) * 360;
+            logger.ZLogWarning($"radius={radius}, DIST={DIST}, A={A}");
 
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                byte[] data = { 0x04, 0x66, 100, 1, speed, 0, 0x00, 0 };
+                byte[] data = { 0x04, 0, 5, 1, 10, 0, 0x00, 0 };
                 writer.Write(data);
 
                 var p = currentMatPosition - MAT_CENTER;
