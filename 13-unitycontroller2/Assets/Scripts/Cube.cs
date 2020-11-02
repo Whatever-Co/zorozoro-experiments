@@ -11,8 +11,10 @@ public class Cube : MonoBehaviour
     static readonly ILogger<Cube> logger = LogManager.GetLogger<Cube>();
 
 
-    public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
-    public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
+    // public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
+    // public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
+    public static readonly Vector2 MAT_MIN = new Vector2(34, 35);
+    public static readonly Vector2 MAT_MAX = new Vector2(644, 682);
     public static readonly Vector2 MAT_CENTER = (MAT_MIN + MAT_MAX) / 2;
 
     public static readonly float DOTS_PER_METER = 411f / 0.560f; // 411/0.560 dot/m
