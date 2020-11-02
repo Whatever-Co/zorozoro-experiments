@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.IO;
 using UnityEngine;
+using UnityEditor;
 using ZLogger;
 
 
@@ -27,13 +28,21 @@ public class Cube : MonoBehaviour
     public int Battery { get; set; } = -1;
     public float LastBatteryTime { get; private set; } = 0;
 
-
     private Vector2 currentMatPosition;
     public float LastPositionTime { get; private set; } = 0;
     private bool goingAroundNow = false;
     public bool IsOnSheet
     {
         get => Vector2.Distance(currentMatPosition, Vector2.zero) > Vector2.kEpsilon;
+    }
+    private bool hittingOthers = false;
+    private GameObject cube;
+
+
+    void Start()
+    {
+        cube = transform.Find("Cube").gameObject;
+        Debug.LogWarning(cube);
     }
 
 
@@ -43,6 +52,27 @@ public class Cube : MonoBehaviour
         Address = cubeAddress;
         BridgeAddress = bridgeAddress;
         this.bridgeManager = bridgeManager;
+    }
+
+
+    void Update()
+    {
+        if (IsGoingAround)
+        {
+            var hit = Physics.Raycast(transform.TransformPoint(new Vector3(10, 1, 0)), transform.forward, 1.2f);
+            if (!hittingOthers && hit)
+            {
+                Stop(false);
+            }
+            hittingOthers = hit;
+        }
+    }
+
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = hittingOthers ? Color.red : Color.yellow;
+        Gizmos.DrawRay(transform.TransformPoint(new Vector3(10, 1, 0)), transform.forward * 1.2f);
     }
 
 
@@ -88,9 +118,12 @@ public class Cube : MonoBehaviour
     }
 
 
-    public void Stop()
+    public void Stop(bool stopGoAround = true)
     {
-        DisableGoAround();
+        if (stopGoAround)
+        {
+            DisableGoAround();
+        }
 
         byte[] data = { 0x01, 0x01, 0x01, 0, 0x02, 0x01, 0 };
         bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
@@ -153,6 +186,7 @@ public class Cube : MonoBehaviour
     float radius;
     byte speed;
     Coroutine coroutine = null;
+    private bool IsGoingAround { get => coroutine != null; }
 
     private void StartGoAround()
     {
@@ -185,6 +219,12 @@ public class Cube : MonoBehaviour
     {
         while (true)
         {
+            if (hittingOthers)
+            {
+                yield return new WaitForSeconds(1f);
+                continue;
+            }
+
             const float DIST = 100f;
             // const float A = 60f;
             // L = 2 PI R
@@ -238,9 +278,10 @@ public class Cube : MonoBehaviour
                     // var sensorY = reader.ReadUInt16();
                     // var sensorRotation = reader.ReadUInt16();
                     transform.localPosition = new Vector3(centerX, 0, -centerY);
-                    transform.localRotation = Quaternion.Euler(0, centerRotation, 0);
+                    transform.localRotation = Quaternion.Euler(0, centerRotation + 90, 0);
 
-                    GetComponentInChildren<MeshRenderer>().enabled = true;
+                    // GetComponentInChildren<MeshRenderer>().enabled = true;
+                    cube.SetActive(true);
 
                     LastPositionTime = Time.realtimeSinceStartup;
                     if (goingAroundNow)
@@ -254,7 +295,8 @@ public class Cube : MonoBehaviour
 
                 case 0x03: // Position ID missed
                     currentMatPosition = Vector2.zero;
-                    GetComponentInChildren<MeshRenderer>().enabled = false;
+                    // GetComponentInChildren<MeshRenderer>().enabled = false;
+                    cube.SetActive(false);
                     LastPositionTime = Time.realtimeSinceStartup;
                     StopGoAround();
                     break;
