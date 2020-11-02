@@ -98,6 +98,12 @@ void App::Loop() {
             ethernet.stop();
             if (mqtt.connect()) {
                 Serial.println("connected");
+                for (const auto & address : CubeManager::GetAddresses()){
+                    char topic[32];
+                    sprintf(topic, "%s/connected", address.c_str());
+                    mqtt.publish(topic, nullptr, 0);
+                    Serial.printf("Published: %s\n", topic);
+                }
                 StartAcceptNewCube();
                 myChrono.restart();
             } else {
