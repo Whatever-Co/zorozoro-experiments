@@ -27,7 +27,7 @@ public class Main : MonoBehaviour
         var scanner = GetComponent<ScannerReceiver>();
         scanner.OnNewCube += bridgeManager.ConnectToCube;
 
-        cubeManager = GetComponent<CubeManager>();
+        cubeManager = CubeManager.Instance;
         cubeManager.BridgeManager = bridgeManager;
     }
 
@@ -85,30 +85,30 @@ public class Main : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.UpArrow))
         {
-            cubeManager.MoveForward();
+            cubeManager.MoveForwardAll();
         }
         if (Input.GetKeyDown(KeyCode.DownArrow))
         {
-            cubeManager.MoveBackward();
+            cubeManager.MoveBackwardAll();
         }
         if (Input.GetKeyDown(KeyCode.RightArrow))
         {
-            cubeManager.RotateRight();
+            cubeManager.RotateRightAll();
         }
         if (Input.GetKeyDown(KeyCode.LeftArrow))
         {
-            cubeManager.RotateLeft();
+            cubeManager.RotateLeftAll();
         }
         if (Input.GetKeyUp(KeyCode.UpArrow) || Input.GetKeyUp(KeyCode.DownArrow) || Input.GetKeyUp(KeyCode.RightArrow) || Input.GetKeyUp(KeyCode.LeftArrow))
         {
-            cubeManager.Stop();
+            cubeManager.StopAll();
         }
     }
 
 
     public void ShowBatteryStatus()
     {
-        cubeManager.ShowBatteryStatus();
+        cubeManager.ShowBatteryStatusAll();
     }
 
 
@@ -121,7 +121,7 @@ public class Main : MonoBehaviour
 
     public void RandomColor()
     {
-        cubeManager.SetLamp(Colors[count++ % Colors.Length]);
+        cubeManager.SetLampAll(Colors[count++ % Colors.Length]);
     }
 
 
@@ -129,20 +129,20 @@ public class Main : MonoBehaviour
 
     public void RandomRotate()
     {
-        cubeManager.SetDirection(angle);
+        cubeManager.SetDirectionAll(angle);
         angle = (angle + 135) % 360;
     }
 
 
     public void LookCenter()
     {
-        cubeManager.LookCenter();
+        cubeManager.LookCenterAll();
     }
 
 
     public void GoAround()
     {
-        cubeManager.GoAround();
+        cubeManager.GoAroundAll();
     }
 
 }

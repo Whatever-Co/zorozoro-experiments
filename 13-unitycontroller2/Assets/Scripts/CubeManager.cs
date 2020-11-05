@@ -10,6 +10,8 @@ public class CubeManager : MonoBehaviour
 
     private static readonly ILogger<CubeManager> logger = LogManager.GetLogger<CubeManager>();
 
+    public static CubeManager Instance { get; private set; }
+
 
     public BridgeManager BridgeManager { get; set; }
     public Transform World;
@@ -17,6 +19,13 @@ public class CubeManager : MonoBehaviour
     private Dictionary<string, Cube> cubes = new Dictionary<string, Cube>();
 
     public int CubeCount { get => cubes.Count(); }
+    public bool GoAroundMode { get; private set; } = false;
+
+
+    void Awake()
+    {
+        Instance = this;
+    }
 
 
     public Cube AddCube(string cubeAddress, string bridgeAddress)
@@ -58,82 +67,10 @@ public class CubeManager : MonoBehaviour
     }
 
 
-    public void MoveForward()
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.MoveForward();
-        }
-    }
-
-
-    public void MoveBackward()
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.MoveBackward();
-        }
-    }
-
-
-    public void RotateRight()
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.RotateRight();
-        }
-    }
-
-
-    public void RotateLeft()
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.RotateLeft();
-        }
-    }
-
-
-    public void Stop()
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.Stop();
-        }
-    }
-
-
     public void NotifyPosition(string address, byte[] data)
     {
         var cube = GetCube(address);
         cube?.NotifyPosition(data);
-    }
-
-
-    public void SetDirection(int angle)
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.SetDirection(angle);
-        }
-    }
-
-
-    public void SetLamp(Color32 color)
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.SetLamp(color);
-        }
-    }
-
-
-    public void ShowBatteryStatus()
-    {
-        foreach (var (address, cube) in cubes)
-        {
-            cube.ShowBatteryStatus();
-        }
     }
 
 
@@ -144,22 +81,101 @@ public class CubeManager : MonoBehaviour
     }
 
 
-    public void LookCenter()
+    public void MoveForwardAll()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.MoveForward();
+        }
+        GoAroundMode = false;
+    }
+
+
+    public void MoveBackwardAll()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.MoveBackward();
+        }
+        GoAroundMode = false;
+    }
+
+
+    public void RotateRightAll()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.RotateRight();
+        }
+        GoAroundMode = false;
+    }
+
+
+    public void RotateLeftAll()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.RotateLeft();
+        }
+        GoAroundMode = false;
+    }
+
+
+    public void StopAll()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.Stop();
+        }
+        GoAroundMode = false;
+    }
+
+
+    public void SetDirectionAll(int angle)
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.SetDirection(angle);
+        }
+        GoAroundMode = false;
+    }
+
+
+    public void SetLampAll(Color32 color)
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.SetLamp(color);
+        }
+    }
+
+
+    public void ShowBatteryStatusAll()
+    {
+        foreach (var (address, cube) in cubes)
+        {
+            cube.ShowBatteryStatus();
+        }
+    }
+
+
+    public void LookCenterAll()
     {
         foreach (var (address, cube) in cubes)
         {
             cube.LookCenter();
         }
+        GoAroundMode = false;
     }
 
 
-    public void GoAround()
+    public void GoAroundAll()
     {
         foreach (var (address, cube) in cubes)
         {
             cube.EnableGoAround();
         }
+        GoAroundMode = true;
     }
-
 
 }

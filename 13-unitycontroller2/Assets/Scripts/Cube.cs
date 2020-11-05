@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.IO;
 using UnityEngine;
-using UnityEditor;
 using ZLogger;
 
 
@@ -12,10 +11,10 @@ public class Cube : MonoBehaviour
     static readonly ILogger<Cube> logger = LogManager.GetLogger<Cube>();
 
 
-    // public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
-    // public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
-    public static readonly Vector2 MAT_MIN = new Vector2(34, 35);
-    public static readonly Vector2 MAT_MAX = new Vector2(644, 682);
+    public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
+    public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
+    // public static readonly Vector2 MAT_MIN = new Vector2(34, 35);
+    // public static readonly Vector2 MAT_MAX = new Vector2(644, 682);
     public static readonly Vector2 MAT_CENTER = (MAT_MIN + MAT_MAX) / 2;
 
     public static readonly float DOTS_PER_METER = 411f / 0.560f; // 411/0.560 dot/m
@@ -30,16 +29,12 @@ public class Cube : MonoBehaviour
 
     private Vector2 currentMatPosition;
     public float LastPositionTime { get; private set; } = 0;
-    private bool goingAroundNow = false;
-    public bool IsOnSheet
-    {
-        get => Vector2.Distance(currentMatPosition, Vector2.zero) > Vector2.kEpsilon;
-    }
+    public bool IsOnSheet { get => Vector2.Distance(currentMatPosition, Vector2.zero) > Vector2.kEpsilon; }
     private bool hittingOthers = false;
     private GameObject cube;
 
 
-    void Start()
+    void Awake()
     {
         cube = transform.Find("Cube").gameObject;
         Debug.LogWarning(cube);
@@ -84,7 +79,7 @@ public class Cube : MonoBehaviour
 
     public void MoveForward(byte speed = 10, byte timeout = 255)
     {
-        DisableGoAround();
+        StopGoAround();
 
         byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x01, speed, timeout };
         bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
@@ -93,7 +88,7 @@ public class Cube : MonoBehaviour
 
     public void MoveBackward(byte speed = 10, byte timeout = 255)
     {
-        DisableGoAround();
+        StopGoAround();
 
         byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x02, speed, timeout };
         bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
@@ -102,7 +97,7 @@ public class Cube : MonoBehaviour
 
     public void RotateRight(byte speed = 10, byte timeout = 255)
     {
-        DisableGoAround();
+        StopGoAround();
 
         byte[] data = { 0x02, 0x01, 0x01, speed, 0x02, 0x02, speed, timeout };
         bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
@@ -111,7 +106,7 @@ public class Cube : MonoBehaviour
 
     public void RotateLeft(byte speed = 10, byte timeout = 255)
     {
-        DisableGoAround();
+        StopGoAround();
 
         byte[] data = { 0x02, 0x01, 0x02, speed, 0x02, 0x01, speed, timeout };
         bridgeManager.SendMotorCommand(BridgeAddress, Address, data);
@@ -122,7 +117,7 @@ public class Cube : MonoBehaviour
     {
         if (stopGoAround)
         {
-            DisableGoAround();
+            StopGoAround();
         }
 
         byte[] data = { 0x01, 0x01, 0x01, 0, 0x02, 0x01, 0 };
@@ -132,7 +127,7 @@ public class Cube : MonoBehaviour
 
     public void SetDirection(int angle)
     {
-        DisableGoAround();
+        StopGoAround();
 
         using (var stream = new MemoryStream())
         using (var writer = new BinaryWriter(stream))
@@ -161,25 +156,11 @@ public class Cube : MonoBehaviour
 
     public void EnableGoAround()
     {
-        if (goingAroundNow)
-        {
-            return;
-        }
-        goingAroundNow = true;
-
-        logger.ZLogWarning($"currentMatPosition={currentMatPosition} dist={Vector2.Distance(currentMatPosition, Vector2.zero)}, LastPositionTime={LastPositionTime}, dt={Time.realtimeSinceStartup - LastPositionTime}");
-
+        // logger.ZLogWarning($"currentMatPosition={currentMatPosition} dist={Vector2.Distance(currentMatPosition, Vector2.zero)}, LastPositionTime={LastPositionTime}, dt={Time.realtimeSinceStartup - LastPositionTime}");
         if (IsOnSheet)
         {
             StartGoAround();
         }
-    }
-
-
-    public void DisableGoAround()
-    {
-        StopGoAround();
-        goingAroundNow = false;
     }
 
 
@@ -284,7 +265,7 @@ public class Cube : MonoBehaviour
                     cube.SetActive(true);
 
                     LastPositionTime = Time.realtimeSinceStartup;
-                    if (goingAroundNow)
+                    if (CubeManager.Instance.GoAroundMode)
                     {
                         StartGoAround();
                     }
@@ -298,7 +279,8 @@ public class Cube : MonoBehaviour
                     // GetComponentInChildren<MeshRenderer>().enabled = false;
                     cube.SetActive(false);
                     LastPositionTime = Time.realtimeSinceStartup;
-                    StopGoAround();
+                    // StopGoAround();
+                    Stop();
                     break;
 
                 case 0x04: // Standard ID missed
