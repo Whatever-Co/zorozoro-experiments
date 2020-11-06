@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using ZLogger;
@@ -10,9 +11,11 @@ public class Main : MonoBehaviour
     private static readonly ILogger<Main> logger = LogManager.GetLogger<Main>();
 
     public Text statusText;
+    public VerticalLayoutGroup buttons;
 
     private CubeManager cubeManager;
     private BridgeManager bridgeManager;
+
 
 
     void Start()
@@ -29,6 +32,24 @@ public class Main : MonoBehaviour
 
         cubeManager = CubeManager.Instance;
         cubeManager.BridgeManager = bridgeManager;
+
+        var actions = new Dictionary<string, UnityEngine.Events.UnityAction>() {
+            { "Battery Status", cubeManager.ShowBatteryStatusAll },
+            { "Random Color", RandomColor },
+            { "Random Rotate", RandomRotate },
+            { "Look Center", cubeManager.LookCenterAll },
+            { "Go Around", cubeManager.GoAroundAll },
+        };
+        var prefab = Resources.Load<GameObject>("Prefabs/Action Button");
+        Debug.Log(prefab);
+        foreach (var kv in actions)
+        {
+            var button = Instantiate(prefab);
+            button.name = kv.Key;
+            button.GetComponentInChildren<Text>().text = kv.Key;
+            button.GetComponent<Button>().onClick.AddListener(kv.Value);
+            button.transform.SetParent(buttons.transform);
+        }
     }
 
 
@@ -76,11 +97,11 @@ public class Main : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.Alpha3))
         {
-            LookCenter();
+            cubeManager.LookCenterAll();
         }
         if (Input.GetKeyDown(KeyCode.Alpha4))
         {
-            GoAround();
+            cubeManager.GoAroundAll();
         }
 
         if (Input.GetKeyDown(KeyCode.UpArrow))
@@ -106,12 +127,6 @@ public class Main : MonoBehaviour
     }
 
 
-    public void ShowBatteryStatus()
-    {
-        cubeManager.ShowBatteryStatusAll();
-    }
-
-
     static Color[] Colors = {
         new Color(1, 1, 0, 1),
         new Color(1, 0, 1, 1),
@@ -131,18 +146,6 @@ public class Main : MonoBehaviour
     {
         cubeManager.SetDirectionAll(angle);
         angle = (angle + 135) % 360;
-    }
-
-
-    public void LookCenter()
-    {
-        cubeManager.LookCenterAll();
-    }
-
-
-    public void GoAround()
-    {
-        cubeManager.GoAroundAll();
     }
 
 }

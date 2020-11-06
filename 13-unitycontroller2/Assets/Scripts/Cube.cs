@@ -11,10 +11,12 @@ public class Cube : MonoBehaviour
     static readonly ILogger<Cube> logger = LogManager.GetLogger<Cube>();
 
 
-    public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
-    public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
+    // public static readonly Vector2 MAT_MIN = new Vector2(98, 142);
+    // public static readonly Vector2 MAT_MAX = new Vector2(402, 358);
     // public static readonly Vector2 MAT_MIN = new Vector2(34, 35);
     // public static readonly Vector2 MAT_MAX = new Vector2(644, 682);
+    public static readonly Vector2 MAT_MIN = new Vector2(34, 35);
+    public static readonly Vector2 MAT_MAX = new Vector2(949, 898);
     public static readonly Vector2 MAT_CENTER = (MAT_MIN + MAT_MAX) / 2;
 
     public static readonly float DOTS_PER_METER = 411f / 0.560f; // 411/0.560 dot/m
@@ -177,7 +179,7 @@ public class Cube : MonoBehaviour
         }
 
         const float MIN_R = 50;
-        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), MIN_R, 300);
+        radius = Mathf.Clamp(Vector2.Distance(currentMatPosition, MAT_CENTER), MIN_R, 400);
         radius = Mathf.FloorToInt((radius - MIN_R) / 35) * 35 + MIN_R;
         // radius = 90;
         // speed = (byte)Mathf.FloorToInt(radius / 5f);
@@ -216,7 +218,7 @@ public class Cube : MonoBehaviour
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                byte[] data = { 0x04, 0, 5, 1, 10, 0, 0x00, 0 };
+                byte[] data = { 0x04, 0, 5, 1, 20, 0, 0x00, 0 };
                 writer.Write(data);
 
                 var p = currentMatPosition - MAT_CENTER;
@@ -264,6 +266,8 @@ public class Cube : MonoBehaviour
                     // GetComponentInChildren<MeshRenderer>().enabled = true;
                     cube.SetActive(true);
 
+                    StopCoroutine(stopTimer);
+
                     LastPositionTime = Time.realtimeSinceStartup;
                     if (CubeManager.Instance.GoAroundMode)
                     {
@@ -280,13 +284,23 @@ public class Cube : MonoBehaviour
                     cube.SetActive(false);
                     LastPositionTime = Time.realtimeSinceStartup;
                     // StopGoAround();
-                    Stop();
+                    // Stop();
+                    // stopTimer = StartCoroutine(DelayedStop());
                     break;
 
                 case 0x04: // Standard ID missed
                     break;
             }
         }
+    }
+
+    Coroutine stopTimer;
+
+
+    IEnumerator DelayedStop()
+    {
+        yield return new WaitForSeconds(1f);
+        Stop();
     }
 
 
