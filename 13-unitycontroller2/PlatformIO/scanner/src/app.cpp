@@ -34,7 +34,7 @@ public:
 // #define WAIT_SERIAL_CONNECTION 1
 
 #define CONTROLLER_HOST "192.168.2.1"
-#define CONTROLLER_PORT 1883
+#define CONTROLLER_PORT 11111
 
 EthernetClient ethernet;
 // static MQTTClient mqtt;
@@ -140,7 +140,7 @@ void loop()
         {
             ethernet.stop();
             Serial.print("Attempting connection...");
-            int ret = ethernet.connect(CONTROLLER_HOST, 11122);
+            int ret = ethernet.connect(CONTROLLER_HOST, CONTROLLER_PORT);
             if (ret > 0)
             {
                 Serial.println("connected");
