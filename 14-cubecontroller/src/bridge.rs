@@ -1,7 +1,9 @@
-use std::io::{Read, Write};
+use std::collections::HashMap;
+use std::io::{self, Read};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
-use std::sync::mpsc::{channel, Sender};
-use std::thread;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Arc, Mutex};
+use std::{thread, time};
 
 #[derive(Debug)]
 pub enum BridgeMode {
@@ -13,7 +15,7 @@ pub enum BridgeMode {
 #[derive(Debug)]
 pub enum Message {
     NewCubeFound(String),
-    Available(usize),
+    Available(String, usize),
     Unknown,
 }
 
@@ -21,28 +23,29 @@ pub enum Message {
 pub struct Bridge {
     address: String,
     mode: BridgeMode,
-    available_slots: usize,
     sender: Sender<Message>,
+    receiver: Receiver<Message>,
     stream: TcpStream,
 }
 
 impl Bridge {
-    pub fn new(sender: Sender<Message>, stream: TcpStream) -> Bridge {
-        let ip = match stream.peer_addr().unwrap() {
+    pub fn new(sender: Sender<Message>, receiver: Receiver<Message>, stream: TcpStream) -> Bridge {
+        let address = match stream.peer_addr().unwrap() {
             SocketAddr::V4(addr) => addr.ip().to_string(),
             SocketAddr::V6(addr) => addr.ip().to_string(),
         };
         Bridge {
-            address: ip,
+            address,
             mode: BridgeMode::Unknown,
-            available_slots: 0,
-            sender: sender,
-            stream: stream,
+            sender,
+            receiver,
+            stream,
         }
     }
 
     pub fn start(&mut self) {
         let mut data = [0 as u8; 50];
+        self.stream.set_nonblocking(true).expect("hohohoh");
         while match self.stream.read(&mut data) {
             Ok(_size) => {
                 let topic_len = data[0] as usize;
@@ -57,6 +60,10 @@ impl Bridge {
                 let payload_len = data[1 + topic_len] as usize;
                 let p = 1 + topic_len + 1;
                 self.process_message(address, command, &data[p..p + payload_len]);
+                true
+            }
+            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                thread::sleep(time::Duration::from_millis(3));
                 true
             }
             Err(_) => {
@@ -83,17 +90,13 @@ impl Bridge {
             }
             "available" => {
                 self.mode = BridgeMode::Bridge;
-                self.available_slots = payload[0] as usize;
-                Message::Available(self.available_slots)
+                let slots = payload[0] as usize;
+                Message::Available(self.address.clone(), slots)
             }
             &_ => Message::Unknown,
         };
         println!("message={:?}", message);
         self.sender.send(message).unwrap();
-    }
-
-    pub fn available_slots(&self) -> usize {
-        self.available_slots
     }
 }
 
@@ -104,15 +107,25 @@ impl BridgeManager {
         let listener = TcpListener::bind("0.0.0.0:11111").unwrap();
         println!("Server listening on port 11111");
 
-        let (sender, receiver) = channel();
+        let (sender1, receiver1) = channel();
+        let mut available_bridges = HashMap::new();
+        let senders_to_bridge = Arc::new(Mutex::new(HashMap::new()));
+
+        let hoge_cuo = Arc::clone(&senders_to_bridge);
 
         thread::spawn(move || {
             for stearm in listener.incoming() {
                 match stearm {
                     Ok(stream) => {
-                        let sender = sender.clone();
+                        let sender1 = sender1.clone();
+                        let (sender2, receiver2) = channel();
+                        let address = match stream.peer_addr().unwrap() {
+                            SocketAddr::V4(addr) => addr.ip().to_string(),
+                            SocketAddr::V6(addr) => addr.ip().to_string(),
+                        };
+                        hoge_cuo.lock().unwrap().insert(Arc::new(address), sender2);
                         thread::spawn(move || {
-                            let mut bridge = Bridge::new(sender, stream);
+                            let mut bridge = Bridge::new(sender1, receiver2, stream);
                             println!("{:?}", bridge);
                             bridge.start();
                         });
@@ -125,8 +138,17 @@ impl BridgeManager {
         });
 
         loop {
-            match receiver.recv().unwrap() {
-                Message::NewCubeFound(address) => {}
+            match receiver1.recv().unwrap() {
+                Message::NewCubeFound(_cube_address) => {
+                    if let Some((_bridge_address, _)) = available_bridges.iter().next() {
+                        let address = Arc::clone(_bridge_address);
+                        available_bridges.remove(&address);
+                        if let Some(a) = senders_to_bridge.lock().unwrap().get(&address) {};
+                    }
+                }
+                Message::Available(address, slots) => {
+                    available_bridges.insert(Arc::new(address), slots);
+                }
                 _ => {}
             };
         }
