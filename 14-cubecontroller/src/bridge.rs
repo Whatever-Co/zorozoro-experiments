@@ -1,23 +1,23 @@
 use std::io::{Read, Write};
-use std::net::SocketAddr;
-use std::net::TcpListener;
-use std::net::{Shutdown, TcpStream};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
 
 #[derive(Debug)]
 pub enum Message {
-    Hoge,
+    NewCubeFound(String),
+    Available(usize),
+    Unknown,
 }
 
 #[derive(Debug)]
-pub struct Bridge<'a> {
-    address: &'a str,
+pub struct Bridge {
+    address: String,
     sender: Sender<Message>,
 }
 
-impl Bridge<'_> {
-    pub fn new(ip: &str, sender: Sender<Message>) -> Bridge {
+impl Bridge {
+    pub fn new(ip: String, sender: Sender<Message>) -> Bridge {
         Bridge {
             address: ip,
             sender: sender,
@@ -27,18 +27,19 @@ impl Bridge<'_> {
     pub fn handle_client(&mut self, mut stream: TcpStream) {
         let mut data = [0 as u8; 50];
         while match stream.read(&mut data) {
-            Ok(size) => {
-                // stream.write(&data[0..size]).unwrap();
+            Ok(_size) => {
                 let topic_len = data[0] as usize;
-                let topic_str = std::str::from_utf8(&data[1..topic_len + 1]).unwrap();
-                let v: Vec<&str> = topic_str.split('/').collect();
+                let topic = std::str::from_utf8(&data[1..topic_len + 1]).unwrap();
+                let (address, command) = match topic.find('/') {
+                    Some(_) => {
+                        let v: Vec<&str> = topic.split('/').collect();
+                        (v[0], v[1])
+                    }
+                    _ => ("", topic),
+                };
                 let payload_len = data[1 + topic_len] as usize;
-                let count = data[1 + topic_len + 1] as usize;
-                println!("{:?}", &data[0..size]);
-                println!("{:?}", topic_str);
-                println!("{:?}", v);
-                println!("{:?}", count);
-                self.sender.send(Message::Hoge).unwrap();
+                let p = 1 + topic_len + 1;
+                self.process_message(address, command, &data[p..p + payload_len]);
                 true
             }
             Err(_) => {
@@ -51,12 +52,32 @@ impl Bridge<'_> {
             }
         } {}
     }
+
+    pub fn process_message(&mut self, address: &str, command: &str, payload: &[u8]) {
+        println!(
+            "address={:?}, command={:?}, payload={:?}",
+            address, command, payload
+        );
+        let message = match command {
+            "newcube" => {
+                let address = std::str::from_utf8(payload).unwrap().to_string();
+                Message::NewCubeFound(address)
+            }
+            "available" => {
+                let count = payload[0] as usize;
+                Message::Available(count)
+            }
+            &_ => Message::Unknown,
+        };
+        println!("message={:?}", message);
+        self.sender.send(message).unwrap();
+    }
 }
 
 pub struct BridgeManager {}
 
 impl BridgeManager {
-    pub fn spawn() {
+    pub fn start() {
         let listener = TcpListener::bind("0.0.0.0:11111").unwrap();
         println!("Server listening on port 11111");
 
@@ -74,7 +95,7 @@ impl BridgeManager {
                         println!("ip: {:?}", ip);
                         let sender = sender.clone();
                         thread::spawn(move || {
-                            let mut bridge = Bridge::new(&ip, sender);
+                            let mut bridge = Bridge::new(ip, sender);
                             println!("{:?}", bridge);
                             bridge.handle_client(stream);
                         });

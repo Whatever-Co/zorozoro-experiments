@@ -2,7 +2,6 @@ mod bridge;
 use bridge::BridgeManager;
 
 fn main() {
-    BridgeManager::spawn();
-
+    BridgeManager::start();
     loop {}
 }
