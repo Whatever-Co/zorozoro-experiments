@@ -3,5 +3,5 @@ use bridge::BridgeManager;
 
 fn main() {
     BridgeManager::start();
-    loop {}
+    // loop {}
 }

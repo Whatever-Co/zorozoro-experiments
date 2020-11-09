@@ -1,3 +1,4 @@
+use byteorder::{LittleEndian, ReadBytesExt};
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
@@ -13,9 +14,21 @@ pub enum BridgeMode {
 }
 
 #[derive(Debug)]
+pub enum IDInfo {
+    PositionID(u16, u16, u16),
+    StandardID(u32, u16),
+    PositionIDMissed,
+    StandardIDMissed,
+}
+
+#[derive(Debug)]
 pub enum Message {
     NewCubeFound(String),
     Available(String, usize),
+    Connected(String),
+    Disconnected(String),
+    IDInfo(IDInfo),
+    BatteryInfo(u8),
     Unknown,
 }
 
@@ -108,6 +121,29 @@ impl Bridge {
                 let slots = payload[0] as usize;
                 Message::Available(self.address.clone(), slots)
             }
+            "connected" => Message::Connected(address.to_string()),
+            "disconnected" => Message::Disconnected(address.to_string()),
+            "position" => match payload[0] {
+                1 => {
+                    let mut p = &payload[1..];
+                    let x = p.read_u16::<LittleEndian>().unwrap();
+                    let y = p.read_u16::<LittleEndian>().unwrap();
+                    let a = p.read_u16::<LittleEndian>().unwrap();
+                    let id = IDInfo::PositionID(x, y, a);
+                    Message::IDInfo(id)
+                }
+                2 => {
+                    let mut p = &payload[1..];
+                    let value = p.read_u32::<LittleEndian>().unwrap();
+                    let a = p.read_u16::<LittleEndian>().unwrap();
+                    let id = IDInfo::StandardID(value, a);
+                    Message::IDInfo(id)
+                }
+                3 => Message::IDInfo(IDInfo::PositionIDMissed),
+                4 => Message::IDInfo(IDInfo::StandardIDMissed),
+                _ => Message::Unknown,
+            },
+            "battery" => Message::BatteryInfo(payload[0]),
             &_ => Message::Unknown,
         };
         println!("message={:?}", message);
