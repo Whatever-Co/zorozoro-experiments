@@ -1,7 +1,8 @@
 mod bridge;
+mod bridge_manager;
 mod cube;
 
-use bridge::BridgeManager;
+use bridge_manager::BridgeManager;
 use cube::CubeManager;
 use iced::{executor, Application, Command, Container, Element, Settings, Subscription, Text};
 use iced_native::{input::ButtonState, subscription, Event};
@@ -49,10 +50,11 @@ impl Application for App {
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
+        use iced_native::input::keyboard::{Event::Input, KeyCode};
         match message {
             Message::EventOccurred(event) => match event {
                 Event::Keyboard(event) => {
-                    if let iced_native::input::keyboard::Event::Input {
+                    if let Input {
                         state,
                         key_code,
                         modifiers: _,
@@ -63,6 +65,9 @@ impl Application for App {
                         if previous != state {
                             self.key_state[index] = state;
                             println!("state={:?}, key_code={:?}", state, key_code);
+                            if state == ButtonState::Pressed && key_code == KeyCode::E {
+                                self.cube_manager.lock().unwrap().set_lamp_all();
+                            }
                         }
                     }
                 }

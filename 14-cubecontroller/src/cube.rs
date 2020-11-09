@@ -30,4 +30,6 @@ impl CubeManager {
             }
         }
     }
+
+    pub fn set_lamp_all(&mut self) {}
 }
