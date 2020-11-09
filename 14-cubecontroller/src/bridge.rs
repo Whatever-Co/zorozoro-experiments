@@ -1,3 +1,4 @@
+use crate::cube::CubeManager;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::collections::HashMap;
 use std::io::{self, Read, Write};
@@ -69,14 +70,11 @@ impl Bridge {
                 if let Some(message) = self.receiver.try_recv().ok() {
                     self.send_message(message);
                 }
-                thread::sleep(time::Duration::from_millis(3));
+                thread::sleep(time::Duration::from_millis(10));
                 true
             }
             Err(_) => {
-                println!(
-                    "An error occurred, terminating connection with {}",
-                    self.stream.peer_addr().unwrap()
-                );
+                println!("An error occurred, terminating connection with {}", self.stream.peer_addr().unwrap());
                 self.stream.shutdown(Shutdown::Both).unwrap();
                 false
             }
@@ -175,11 +173,13 @@ impl Bridge {
     }
 }
 
-pub struct BridgeManager {}
+pub struct BridgeManager {
+    cube_manager: Arc<Mutex<CubeManager>>,
+}
 
 impl BridgeManager {
-    pub fn new() -> BridgeManager {
-        BridgeManager {}
+    pub fn new(cube_manager: Arc<Mutex<CubeManager>>) -> BridgeManager {
+        BridgeManager { cube_manager }
     }
 
     pub fn start(&mut self) {
@@ -191,7 +191,7 @@ impl BridgeManager {
 
         let (sender1, receiver1) = channel();
         {
-            let senders_to_bridge = Arc::clone(&senders_to_bridge);
+            let senders_to_bridge = senders_to_bridge.clone();
             thread::spawn(move || {
                 for stearm in listener.incoming() {
                     match stearm {
@@ -235,9 +235,7 @@ impl BridgeManager {
                 }
 
                 Message::Connected(bridge_address, cube_address) => {
-                    if let Some(sender) = senders_to_bridge.lock().unwrap().get(&bridge_address) {
-                        sender.send(Message::SetLamp(cube_address, 0, 255, 255)).unwrap();
-                    };
+                    self.cube_manager.lock().unwrap().add_new(bridge_address, cube_address);
                 }
                 _ => {}
             };
