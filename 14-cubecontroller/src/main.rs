@@ -4,6 +4,7 @@ mod cube;
 use bridge::BridgeManager;
 use cube::CubeManager;
 use iced::{executor, Application, Command, Container, Element, Settings, Subscription, Text};
+use iced_native::{input::ButtonState, subscription, Event};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -25,12 +26,14 @@ fn main() {
     });
 }
 
-#[derive(Debug, Default)]
-struct App {}
+#[derive(Debug)]
+struct App {
+    key_state: [ButtonState; 256],
+}
 
 #[derive(Debug)]
 pub enum Message {
-    EventOccurred(iced_native::Event),
+    EventOccurred(Event),
 }
 
 impl Application for App {
@@ -39,7 +42,12 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
-        (Self::default(), Command::none())
+        (
+            App {
+                key_state: [ButtonState::Released; 256],
+            },
+            Command::none(),
+        )
     }
 
     fn title(&self) -> String {
@@ -48,16 +56,31 @@ impl Application for App {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::EventOccurred(event) => {
-                println!("Event={:?}", event);
-            }
+            Message::EventOccurred(event) => match event {
+                Event::Keyboard(event) => {
+                    if let iced_native::input::keyboard::Event::Input {
+                        state,
+                        key_code,
+                        modifiers: _,
+                    } = event
+                    {
+                        let index = key_code as usize;
+                        let previous = self.key_state[index];
+                        if previous != state {
+                            self.key_state[index] = state;
+                            println!("state={:?}, key_code={:?}", state, key_code);
+                        }
+                    }
+                }
+                _ => {}
+            },
             _ => println!("?"),
         }
         Command::none()
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        iced_native::subscription::events().map(Message::EventOccurred)
+        subscription::events().map(Message::EventOccurred)
     }
 
     fn view(&mut self) -> Element<Message> {
