@@ -9,13 +9,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 fn main() {
-    let cube_manager = Arc::new(Mutex::new(CubeManager::new()));
-
-    thread::spawn(move || {
-        let cube_manager = cube_manager.clone();
-        BridgeManager::new(cube_manager).start();
-    });
-
     App::run(Settings {
         window: iced::window::Settings {
             size: (400, 300),
@@ -29,6 +22,7 @@ fn main() {
 #[derive(Debug)]
 struct App {
     key_state: [ButtonState; 256],
+    cube_manager: Arc<Mutex<CubeManager>>,
 }
 
 #[derive(Debug)]
@@ -42,12 +36,12 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
-        (
-            App {
-                key_state: [ButtonState::Released; 256],
-            },
-            Command::none(),
-        )
+        let app = App {
+            key_state: [ButtonState::Released; 256],
+            cube_manager: Arc::new(Mutex::new(CubeManager::new())),
+        };
+        app.start();
+        (app, Command::none())
     }
 
     fn title(&self) -> String {
@@ -85,5 +79,14 @@ impl Application for App {
 
     fn view(&mut self) -> Element<Message> {
         Container::new(Text::new("aaa")).into()
+    }
+}
+
+impl App {
+    fn start(&self) {
+        let cube_manager = self.cube_manager.clone();
+        thread::spawn(move || {
+            BridgeManager::new(cube_manager).start();
+        });
     }
 }

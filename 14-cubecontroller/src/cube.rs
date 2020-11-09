@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+#[derive(Debug)]
 pub struct Cube {
     address: String,
     bridge: String,
 }
 
+#[derive(Debug)]
 pub struct CubeManager {
     cubes: HashMap<String, Cube>,
 }
