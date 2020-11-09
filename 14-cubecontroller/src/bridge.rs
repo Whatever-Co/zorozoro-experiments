@@ -25,10 +25,11 @@ pub enum IDInfo {
 pub enum Message {
     NewCubeFound(String),
     Available(String, usize),
-    Connected(String),
-    Disconnected(String),
+    Connected(String, String),
+    Disconnected(String, String),
     IDInfo(IDInfo),
     BatteryInfo(u8),
+    SetLamp(String, u8, u8, u8),
     Unknown,
 }
 
@@ -61,35 +62,12 @@ impl Bridge {
         self.stream.set_nonblocking(true).unwrap();
         while match self.stream.read(&mut data) {
             Ok(_size) => {
-                let topic_len = data[0] as usize;
-                let topic = std::str::from_utf8(&data[1..topic_len + 1]).unwrap();
-                let (address, command) = match topic.find('/') {
-                    Some(_) => {
-                        let v: Vec<&str> = topic.split('/').collect();
-                        (v[0], v[1])
-                    }
-                    _ => ("", topic),
-                };
-                let payload_len = data[1 + topic_len] as usize;
-                let p = 1 + topic_len + 1;
-                self.process_message(address, command, &data[p..p + payload_len]);
+                self.process_message(&data);
                 true
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 if let Some(message) = self.receiver.try_recv().ok() {
-                    match message {
-                        Message::NewCubeFound(cube_address) => {
-                            let mut buffer = Vec::<u8>::with_capacity(64);
-                            let topic = "/newcube";
-                            buffer.push(topic.len() as u8);
-                            buffer.extend(topic.as_bytes());
-                            buffer.push(cube_address.len() as u8);
-                            buffer.extend(cube_address.as_bytes());
-                            println!("len={:?}, buffer={:?}", buffer.len(), buffer);
-                            self.stream.write(&buffer).unwrap();
-                        }
-                        _ => {}
-                    }
+                    self.send_message(message);
                 }
                 thread::sleep(time::Duration::from_millis(3));
                 true
@@ -105,24 +83,39 @@ impl Bridge {
         } {}
     }
 
-    pub fn process_message(&mut self, address: &str, command: &str, payload: &[u8]) {
-        println!(
-            "address={:?}, command={:?}, payload={:?}",
-            address, command, payload
-        );
+    fn process_message(&mut self, data: &[u8]) {
+        let (address, command, payload) = {
+            let topic_len = data[0] as usize;
+            let topic = std::str::from_utf8(&data[1..topic_len + 1]).unwrap();
+            let (address, command) = match topic.find('/') {
+                Some(_) => {
+                    let v: Vec<&str> = topic.split('/').collect();
+                    (v[0], v[1])
+                }
+                _ => ("", topic),
+            };
+            let payload_len = data[1 + topic_len] as usize;
+            let p = 1 + topic_len + 1;
+            (address, command, &data[p..p + payload_len])
+        };
+        println!("address={:?}, command={:?}, payload={:?}", address, command, payload);
         let message = match command {
             "newcube" => {
                 self.mode = BridgeMode::Scanner;
                 let address = std::str::from_utf8(payload).unwrap().to_string();
                 Message::NewCubeFound(address)
             }
+
             "available" => {
                 self.mode = BridgeMode::Bridge;
                 let slots = payload[0] as usize;
                 Message::Available(self.address.clone(), slots)
             }
-            "connected" => Message::Connected(address.to_string()),
-            "disconnected" => Message::Disconnected(address.to_string()),
+
+            "connected" => Message::Connected(self.address.clone(), address.to_string()),
+
+            "disconnected" => Message::Disconnected(self.address.clone(), address.to_string()),
+
             "position" => match payload[0] {
                 1 => {
                     let mut p = &payload[1..];
@@ -143,18 +136,53 @@ impl Bridge {
                 4 => Message::IDInfo(IDInfo::StandardIDMissed),
                 _ => Message::Unknown,
             },
+
             "battery" => Message::BatteryInfo(payload[0]),
+
             &_ => Message::Unknown,
         };
         println!("message={:?}", message);
         self.sender.send(message).unwrap();
+    }
+
+    fn send_message(&mut self, message: Message) {
+        match message {
+            Message::NewCubeFound(cube_address) => {
+                let mut buffer = Vec::<u8>::with_capacity(64);
+                let topic = "/newcube";
+                buffer.push(topic.len() as u8);
+                buffer.extend(topic.as_bytes());
+                buffer.push(cube_address.len() as u8);
+                buffer.extend(cube_address.as_bytes());
+                println!("len={:?}, buffer={:?}", buffer.len(), buffer);
+                self.stream.write(&buffer).unwrap();
+            }
+
+            Message::SetLamp(cube_address, r, g, b) => {
+                let mut buffer = Vec::<u8>::with_capacity(64);
+                let topic = cube_address + "/lamp";
+                buffer.push(topic.len() as u8);
+                buffer.extend(topic.as_bytes());
+                let payload = vec![0x03, 0x00, 0x01, 0x01, r, g, b];
+                buffer.push(payload.len() as u8);
+                buffer.extend(payload);
+                println!("len={:?}, buffer={:?}", buffer.len(), buffer);
+                self.stream.write(&buffer).unwrap();
+            }
+
+            _ => {}
+        }
     }
 }
 
 pub struct BridgeManager {}
 
 impl BridgeManager {
-    pub fn start() {
+    pub fn new() -> BridgeManager {
+        BridgeManager {}
+    }
+
+    pub fn start(&mut self) {
         let listener = TcpListener::bind("0.0.0.0:11111").unwrap();
         println!("Server listening on port 11111");
 
@@ -174,10 +202,7 @@ impl BridgeManager {
                                 SocketAddr::V4(addr) => addr.ip().to_string(),
                                 SocketAddr::V6(addr) => addr.ip().to_string(),
                             };
-                            senders_to_bridge
-                                .lock()
-                                .unwrap()
-                                .insert(Arc::new(address), sender2);
+                            senders_to_bridge.lock().unwrap().insert(Arc::new(address), sender2);
                             thread::spawn(move || {
                                 let mut bridge = Bridge::new(sender1, receiver2, stream);
                                 println!("{:?}", bridge);
@@ -204,8 +229,15 @@ impl BridgeManager {
                         };
                     }
                 }
+
                 Message::Available(address, slots) => {
                     available_bridges.insert(Arc::new(address), slots);
+                }
+
+                Message::Connected(bridge_address, cube_address) => {
+                    if let Some(sender) = senders_to_bridge.lock().unwrap().get(&bridge_address) {
+                        sender.send(Message::SetLamp(cube_address, 0, 255, 255)).unwrap();
+                    };
                 }
                 _ => {}
             };
