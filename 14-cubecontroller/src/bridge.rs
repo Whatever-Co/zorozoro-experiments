@@ -1,7 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use crossbeam_channel::{Receiver, Sender};
 use std::io::{self, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
-use std::sync::mpsc::{Receiver, Sender};
 use std::{thread, time};
 
 #[derive(Debug)]

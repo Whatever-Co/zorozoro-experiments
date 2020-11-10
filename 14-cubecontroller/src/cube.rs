@@ -1,6 +1,6 @@
 use crate::bridge::Message;
+use crossbeam_channel::{Receiver, Sender};
 use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(Debug)]
 pub struct Cube {

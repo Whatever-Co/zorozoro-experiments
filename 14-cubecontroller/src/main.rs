@@ -3,10 +3,10 @@ mod bridge_manager;
 mod cube;
 
 use bridge_manager::BridgeManager;
+use crossbeam_channel::unbounded;
 use cube::CubeManager;
 use iced::{executor, Application, Command, Container, Element, Settings, Subscription, Text};
 use iced_native::{input::ButtonState, subscription, Event};
-use std::sync::mpsc::channel;
 use std::thread;
 
 fn main() {
@@ -38,9 +38,9 @@ impl Application for App {
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
         // Bridge -> Cubes
-        let (b2c_sender, b2c_receiver) = channel();
+        let (b2c_sender, b2c_receiver) = unbounded();
         // Bridge <- Cubes
-        let (c2b_sender, c2b_receiver) = channel();
+        let (c2b_sender, c2b_receiver) = unbounded();
         let app = App {
             key_state: [ButtonState::Released; 256],
             cube_manager: CubeManager::new(c2b_sender, b2c_receiver),

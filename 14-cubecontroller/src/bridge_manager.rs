@@ -1,7 +1,7 @@
 use crate::bridge::{Bridge, Message};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpListener};
-use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -22,7 +22,7 @@ impl BridgeManager {
 
         let senders_to_bridge = Arc::new(Mutex::new(HashMap::new()));
 
-        let (to_manager, from_bridge) = channel();
+        let (to_manager, from_bridge) = unbounded();
         {
             let senders_to_bridge = senders_to_bridge.clone();
             thread::spawn(move || {
@@ -30,7 +30,7 @@ impl BridgeManager {
                     match stearm {
                         Ok(stream) => {
                             let to_manager = to_manager.clone();
-                            let (to_bridge, from_manager) = channel();
+                            let (to_bridge, from_manager) = unbounded();
                             let address = match stream.peer_addr().unwrap() {
                                 SocketAddr::V4(addr) => addr.ip().to_string(),
                                 SocketAddr::V6(addr) => addr.ip().to_string(),
