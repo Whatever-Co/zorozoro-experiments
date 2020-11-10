@@ -25,8 +25,8 @@ pub enum Message {
     Available(String, usize),
     Connected(String, String),
     Disconnected(String, String),
-    IDInfo(IDInfo),
-    BatteryInfo(u8),
+    IDInfo(String, IDInfo),
+    BatteryInfo(String, u8),
     SetLampAll(u8, u8, u8),
     SetLamp(String, String, u8, u8, u8),
     Unknown,
@@ -92,7 +92,7 @@ impl Bridge {
             };
             let payload_len = data[1 + topic_len] as usize;
             let p = 1 + topic_len + 1;
-            (address, command, &data[p..p + payload_len])
+            (address.to_string(), command, &data[p..p + payload_len])
         };
         println!("address={:?}, command={:?}, payload={:?}", address, command, payload);
         let message = match command {
@@ -108,9 +108,9 @@ impl Bridge {
                 Message::Available(self.address.clone(), slots)
             }
 
-            "connected" => Message::Connected(self.address.clone(), address.to_string()),
+            "connected" => Message::Connected(self.address.clone(), address),
 
-            "disconnected" => Message::Disconnected(self.address.clone(), address.to_string()),
+            "disconnected" => Message::Disconnected(self.address.clone(), address),
 
             "position" => match payload[0] {
                 1 => {
@@ -119,21 +119,21 @@ impl Bridge {
                     let y = p.read_u16::<LittleEndian>().unwrap();
                     let a = p.read_u16::<LittleEndian>().unwrap();
                     let id = IDInfo::PositionID(x, y, a);
-                    Message::IDInfo(id)
+                    Message::IDInfo(address, id)
                 }
                 2 => {
                     let mut p = &payload[1..];
                     let value = p.read_u32::<LittleEndian>().unwrap();
                     let a = p.read_u16::<LittleEndian>().unwrap();
                     let id = IDInfo::StandardID(value, a);
-                    Message::IDInfo(id)
+                    Message::IDInfo(address, id)
                 }
-                3 => Message::IDInfo(IDInfo::PositionIDMissed),
-                4 => Message::IDInfo(IDInfo::StandardIDMissed),
+                3 => Message::IDInfo(address, IDInfo::PositionIDMissed),
+                4 => Message::IDInfo(address, IDInfo::StandardIDMissed),
                 _ => Message::Unknown,
             },
 
-            "battery" => Message::BatteryInfo(payload[0]),
+            "battery" => Message::BatteryInfo(address, payload[0]),
 
             &_ => Message::Unknown,
         };

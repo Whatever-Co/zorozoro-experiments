@@ -79,7 +79,9 @@ impl BridgeManager {
                 self.bridges.sort_by(|a, b| a.1.cmp(&b.1));
             }
 
-            m @ Message::Connected(_, _) => self.to_cubes.send(m.clone()).unwrap(),
+            m @ Message::Connected(_, _) | m @ Message::Disconnected(_, _) | m @ Message::IDInfo(_, _) | m @ Message::BatteryInfo(_, _) => {
+                self.to_cubes.send(m.clone()).unwrap()
+            }
 
             Message::SetLamp(cube_address, bridge_address, r, g, b) => {
                 if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(bridge_address) {

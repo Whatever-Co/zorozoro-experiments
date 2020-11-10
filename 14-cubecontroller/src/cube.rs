@@ -7,6 +7,7 @@ pub struct Cube {
     address: String,
     bridge: String,
     to_bridge: Sender<Message>,
+    battery: u8,
 }
 
 impl Cube {
@@ -14,6 +15,22 @@ impl Cube {
         println!("set_lamp");
         self.to_bridge
             .send(Message::SetLamp(self.address.clone(), self.bridge.clone(), red, green, blue))
+            .unwrap();
+    }
+
+    pub fn set_battery(&mut self, value: u8) {
+        if value == self.battery {
+            return;
+        }
+        self.battery = value;
+        let (r, g, b) = match self.battery {
+            0..=10 => (255, 0, 0),
+            11..=20 => (255, 0, 0),
+            21..=50 => (254, 176, 25),
+            _ => (0, 255, 0),
+        };
+        self.to_bridge
+            .send(Message::SetLamp(self.address.clone(), self.bridge.clone(), r, g, b))
             .unwrap();
     }
 }
@@ -41,16 +58,22 @@ impl CubeManager {
                     self.add_new(bridge_address, cube_address);
                 }
 
+                Message::Disconnected(_bridge_address, cube_address) => {
+                    self.cubes.remove(&cube_address);
+                }
+
+                Message::BatteryInfo(cube_address, value) => {
+                    self.cubes.entry(cube_address).and_modify(|cube| cube.set_battery(value));
+                }
+
                 Message::SetLampAll(r, g, b) => {
-                    println!("SetLampAll: {},{},{}", r, g, b);
                     for cube in self.cubes.values() {
-                        println!("cube: {:?}", cube);
                         cube.set_lamp(r, g, b);
                     }
                 }
 
                 e @ _ => {
-                    eprintln!("Unknown: {:?}", e);
+                    eprintln!("Unhandled message: {:?}", e);
                 }
             }
         }
@@ -66,6 +89,7 @@ impl CubeManager {
                 address: cube_address,
                 bridge: bridge_address,
                 to_bridge: to_bridge,
+                battery: 0,
             });
     }
 }
