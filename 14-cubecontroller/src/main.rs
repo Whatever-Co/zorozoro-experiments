@@ -6,7 +6,7 @@ use bridge_manager::BridgeManager;
 use cube::CubeManager;
 use iced::{executor, Application, Command, Container, Element, Settings, Subscription, Text};
 use iced_native::{input::ButtonState, subscription, Event};
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::channel;
 use std::thread;
 
 fn main() {
@@ -23,7 +23,7 @@ fn main() {
 #[derive(Debug)]
 struct App {
     key_state: [ButtonState; 256],
-    cube_manager: Arc<Mutex<CubeManager>>,
+    cube_manager: CubeManager,
 }
 
 #[derive(Debug)]
@@ -37,11 +37,17 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
+        // Bridge -> Cubes
+        let (b2c_sender, b2c_receiver) = channel();
+        // Bridge <- Cubes
+        let (c2b_sender, c2b_receiver) = channel();
         let app = App {
             key_state: [ButtonState::Released; 256],
-            cube_manager: Arc::new(Mutex::new(CubeManager::new())),
+            cube_manager: CubeManager::new(c2b_sender, b2c_receiver),
         };
-        app.start();
+        thread::spawn(move || {
+            BridgeManager::new(b2c_sender, c2b_receiver).start();
+        });
         (app, Command::none())
     }
 
@@ -66,7 +72,7 @@ impl Application for App {
                             self.key_state[index] = state;
                             println!("state={:?}, key_code={:?}", state, key_code);
                             if state == ButtonState::Pressed && key_code == KeyCode::E {
-                                self.cube_manager.lock().unwrap().set_lamp_all();
+                                self.cube_manager.set_lamp_all();
                             }
                         }
                     }
@@ -87,11 +93,4 @@ impl Application for App {
     }
 }
 
-impl App {
-    fn start(&self) {
-        let cube_manager = self.cube_manager.clone();
-        thread::spawn(move || {
-            BridgeManager::new(cube_manager).start();
-        });
-    }
-}
+impl App {}

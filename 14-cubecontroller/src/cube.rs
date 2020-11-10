@@ -1,4 +1,6 @@
+use crate::bridge::Message;
 use std::collections::HashMap;
+use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(Debug)]
 pub struct Cube {
@@ -9,11 +11,17 @@ pub struct Cube {
 #[derive(Debug)]
 pub struct CubeManager {
     cubes: HashMap<String, Cube>,
+    to_bridge: Sender<Message>,
+    from_bridge: Receiver<Message>,
 }
 
 impl CubeManager {
-    pub fn new() -> CubeManager {
-        CubeManager { cubes: HashMap::new() }
+    pub fn new(sender: Sender<Message>, receiver: Receiver<Message>) -> CubeManager {
+        CubeManager {
+            cubes: HashMap::new(),
+            to_bridge: sender,
+            from_bridge: receiver,
+        }
     }
 
     pub fn add_new(&mut self, bridge_address: String, cube_address: String) {

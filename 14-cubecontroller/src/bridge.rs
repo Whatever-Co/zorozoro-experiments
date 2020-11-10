@@ -35,13 +35,13 @@ pub enum Message {
 pub struct Bridge {
     address: String,
     mode: BridgeMode,
-    sender: Sender<Message>,
-    receiver: Receiver<Message>,
+    to_manager: Sender<Message>,
+    from_manager: Receiver<Message>,
     stream: TcpStream,
 }
 
 impl Bridge {
-    pub fn new(sender: Sender<Message>, receiver: Receiver<Message>, stream: TcpStream) -> Bridge {
+    pub fn new(to_manager: Sender<Message>, from_manager: Receiver<Message>, stream: TcpStream) -> Bridge {
         let address = match stream.peer_addr().unwrap() {
             SocketAddr::V4(addr) => addr.ip().to_string(),
             SocketAddr::V6(addr) => addr.ip().to_string(),
@@ -49,8 +49,8 @@ impl Bridge {
         Bridge {
             address,
             mode: BridgeMode::Unknown,
-            sender,
-            receiver,
+            to_manager,
+            from_manager,
             stream,
         }
     }
@@ -64,7 +64,7 @@ impl Bridge {
                 true
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                if let Some(message) = self.receiver.try_recv().ok() {
+                if let Some(message) = self.from_manager.try_recv().ok() {
                     self.send_message(message);
                 }
                 thread::sleep(time::Duration::from_millis(10));
@@ -137,7 +137,7 @@ impl Bridge {
             &_ => Message::Unknown,
         };
         println!("message={:?}", message);
-        self.sender.send(message).unwrap();
+        self.to_manager.send(message).unwrap();
     }
 
     fn send_message(&mut self, message: Message) {
@@ -165,7 +165,7 @@ impl Bridge {
                 self.stream.write(&buffer).unwrap();
             }
 
-            _ => {}
+            _ => (),
         }
     }
 }
