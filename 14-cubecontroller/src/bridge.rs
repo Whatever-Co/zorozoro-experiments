@@ -11,7 +11,7 @@ pub enum BridgeMode {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum IDInfo {
     PositionID(u16, u16, u16),
     StandardID(u32, u16),
@@ -19,7 +19,7 @@ pub enum IDInfo {
     StandardIDMissed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Message {
     NewCubeFound(String),
     Available(String, usize),

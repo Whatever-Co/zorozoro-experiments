@@ -57,34 +57,36 @@ impl BridgeManager {
 
         loop {
             select! {
-                recv(from_bridge) -> message => self.process_message(message.unwrap()),
-                recv(self.from_cubes) -> message => self.process_message(message.unwrap()),
+                recv(from_bridge) -> message => self.process_message(&message.unwrap()),
+                recv(self.from_cubes) -> message => self.process_message(&message.unwrap()),
             }
         }
     }
 
-    fn process_message(&mut self, message: Message) {
+    fn process_message(&mut self, message: &Message) {
         match message {
             Message::NewCubeFound(cube_address) => {
                 if let Some((bridge_address, _slots)) = self.bridges.pop() {
                     if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(&bridge_address) {
                         println!("sender={:?}", sender);
-                        sender.send(Message::NewCubeFound(cube_address)).unwrap();
+                        sender.send(Message::NewCubeFound(cube_address.clone())).unwrap();
                     };
                 }
             }
 
             Message::Available(address, slots) => {
-                self.bridges.push((address, slots));
+                self.bridges.push((address.clone(), *slots));
                 self.bridges.sort_by(|a, b| a.1.cmp(&b.1));
             }
 
-            m @ Message::Connected(_, _) => self.to_cubes.send(m).unwrap(),
+            m @ Message::Connected(_, _) => self.to_cubes.send(m.clone()).unwrap(),
 
             Message::SetLamp(cube_address, bridge_address, r, g, b) => {
-                if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(&bridge_address) {
+                if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(bridge_address) {
                     println!("sender={:?}", sender);
-                    sender.send(Message::SetLamp(cube_address, bridge_address, r, g, b)).unwrap();
+                    sender
+                        .send(Message::SetLamp(cube_address.clone(), bridge_address.clone(), *r, *g, *b))
+                        .unwrap();
                 }
             }
 
