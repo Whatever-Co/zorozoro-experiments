@@ -3,7 +3,7 @@ mod bridge_manager;
 mod cube;
 
 use bridge_manager::BridgeManager;
-use crossbeam_channel::unbounded;
+use crossbeam_channel::{unbounded, Sender};
 use cube::CubeManager;
 use iced::{executor, Application, Command, Container, Element, Settings, Subscription, Text};
 use iced_native::{input::ButtonState, subscription, Event};
@@ -23,7 +23,7 @@ fn main() {
 #[derive(Debug)]
 struct App {
     key_state: [ButtonState; 256],
-    cube_manager: CubeManager,
+    to_cubes_sender: Sender<bridge::Message>,
 }
 
 #[derive(Debug)]
@@ -37,18 +37,22 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
-        // Bridge -> Cubes
-        let (b2c_sender, b2c_receiver) = unbounded();
-        // Bridge <- Cubes
-        let (c2b_sender, c2b_receiver) = unbounded();
-        let app = App {
-            key_state: [ButtonState::Released; 256],
-            cube_manager: CubeManager::new(c2b_sender, b2c_receiver),
-        };
+        let (to_cubes_sender, to_cubes_receiver) = unbounded(); // Bridges -> Cubes
+        let (to_bridges_sender, to_bridges_receiver) = unbounded(); // Bridges <- Cubes
+        let to_cubes2 = to_cubes_sender.clone();
         thread::spawn(move || {
-            BridgeManager::new(b2c_sender, c2b_receiver).start();
+            CubeManager::new(to_bridges_sender, to_cubes_receiver).start();
         });
-        (app, Command::none())
+        thread::spawn(move || {
+            BridgeManager::new(to_cubes_sender, to_bridges_receiver).start();
+        });
+        (
+            App {
+                key_state: [ButtonState::Released; 256],
+                to_cubes_sender: to_cubes2,
+            },
+            Command::none(),
+        )
     }
 
     fn title(&self) -> String {
@@ -72,14 +76,14 @@ impl Application for App {
                             self.key_state[index] = state;
                             println!("state={:?}, key_code={:?}", state, key_code);
                             if state == ButtonState::Pressed && key_code == KeyCode::E {
-                                self.cube_manager.set_lamp_all();
+                                println!("sent SetLampAll");
+                                self.to_cubes_sender.send(bridge::Message::SetLampAll(255, 0, 0)).unwrap();
                             }
                         }
                     }
                 }
                 _ => {}
             },
-            _ => println!("?"),
         }
         Command::none()
     }

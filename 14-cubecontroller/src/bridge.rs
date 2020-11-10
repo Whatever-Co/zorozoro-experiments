@@ -27,7 +27,8 @@ pub enum Message {
     Disconnected(String, String),
     IDInfo(IDInfo),
     BatteryInfo(u8),
-    SetLamp(String, u8, u8, u8),
+    SetLampAll(u8, u8, u8),
+    SetLamp(String, String, u8, u8, u8),
     Unknown,
 }
 
@@ -153,7 +154,7 @@ impl Bridge {
                 self.stream.write(&buffer).unwrap();
             }
 
-            Message::SetLamp(cube_address, r, g, b) => {
+            Message::SetLamp(cube_address, _bridge_address, r, g, b) => {
                 let mut buffer = Vec::<u8>::with_capacity(64);
                 let topic = cube_address + "/lamp";
                 buffer.push(topic.len() as u8);

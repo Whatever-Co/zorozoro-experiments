@@ -6,6 +6,16 @@ use std::collections::HashMap;
 pub struct Cube {
     address: String,
     bridge: String,
+    to_bridge: Sender<Message>,
+}
+
+impl Cube {
+    pub fn set_lamp(&self, red: u8, green: u8, blue: u8) {
+        println!("set_lamp");
+        self.to_bridge
+            .send(Message::SetLamp(self.address.clone(), self.bridge.clone(), red, green, blue))
+            .unwrap();
+    }
 }
 
 #[derive(Debug)]
@@ -24,20 +34,38 @@ impl CubeManager {
         }
     }
 
-    pub fn add_new(&mut self, bridge_address: String, cube_address: String) {
-        match self.cubes.get_mut(&cube_address) {
-            Some(cube) => {
-                cube.bridge = bridge_address.clone();
-            }
-            None => {
-                let cube = Cube {
-                    address: cube_address.clone(),
-                    bridge: bridge_address,
-                };
-                self.cubes.insert(cube_address, cube);
+    pub fn start(&mut self) {
+        loop {
+            match self.from_bridge.recv().unwrap() {
+                Message::Connected(bridge_address, cube_address) => {
+                    self.add_new(bridge_address, cube_address);
+                }
+
+                Message::SetLampAll(r, g, b) => {
+                    println!("SetLampAll: {},{},{}", r, g, b);
+                    for cube in self.cubes.values() {
+                        println!("cube: {:?}", cube);
+                        cube.set_lamp(r, g, b);
+                    }
+                }
+
+                e @ _ => {
+                    eprintln!("Unknown: {:?}", e);
+                }
             }
         }
     }
 
-    pub fn set_lamp_all(&mut self) {}
+    pub fn add_new(&mut self, bridge_address: String, cube_address: String) {
+        println!("add_new: bridge_address={:?}, cube_address={:?}", bridge_address, cube_address);
+        let to_bridge = self.to_bridge.clone();
+        self.cubes
+            .entry(cube_address.clone())
+            .and_modify(|cube| cube.bridge = bridge_address.clone())
+            .or_insert_with(|| Cube {
+                address: cube_address,
+                bridge: bridge_address,
+                to_bridge: to_bridge,
+            });
+    }
 }

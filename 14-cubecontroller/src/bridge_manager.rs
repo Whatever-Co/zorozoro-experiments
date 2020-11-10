@@ -1,5 +1,5 @@
 use crate::bridge::{Bridge, Message};
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{select, unbounded, Receiver, Sender};
 use std::collections::HashMap;
 use std::net::{SocketAddr, TcpListener};
 use std::sync::{Arc, Mutex};
@@ -9,22 +9,27 @@ use std::thread;
 pub struct BridgeManager {
     to_cubes: Sender<Message>,
     from_cubes: Receiver<Message>,
+    senders_to_bridge: Arc<Mutex<HashMap<String, Sender<Message>>>>,
+    bridges: Vec<(String, usize)>,
 }
 
 impl BridgeManager {
     pub fn new(to_cubes: Sender<Message>, from_cubes: Receiver<Message>) -> BridgeManager {
-        BridgeManager { to_cubes, from_cubes }
+        BridgeManager {
+            to_cubes,
+            from_cubes,
+            senders_to_bridge: Arc::new(Mutex::new(HashMap::new())),
+            bridges: Vec::with_capacity(32),
+        }
     }
 
     pub fn start(&mut self) {
         let listener = TcpListener::bind("0.0.0.0:11111").unwrap();
         println!("Server listening on port 11111");
 
-        let senders_to_bridge = Arc::new(Mutex::new(HashMap::new()));
-
         let (to_manager, from_bridge) = unbounded();
         {
-            let senders_to_bridge = senders_to_bridge.clone();
+            let senders_to_bridge = self.senders_to_bridge.clone();
             thread::spawn(move || {
                 for stearm in listener.incoming() {
                     match stearm {
@@ -50,27 +55,40 @@ impl BridgeManager {
             });
         }
 
-        let mut bridges = Vec::<(String, usize)>::with_capacity(32);
         loop {
-            match from_bridge.recv().unwrap() {
-                Message::NewCubeFound(cube_address) => {
-                    if let Some((bridge_address, _slots)) = bridges.pop() {
-                        if let Some(sender) = senders_to_bridge.lock().unwrap().get(&bridge_address) {
-                            println!("sender={:?}", sender);
-                            sender.send(Message::NewCubeFound(cube_address)).unwrap();
-                        };
-                    }
+            select! {
+                recv(from_bridge) -> message => self.process_message(message.unwrap()),
+                recv(self.from_cubes) -> message => self.process_message(message.unwrap()),
+            }
+        }
+    }
+
+    fn process_message(&mut self, message: Message) {
+        match message {
+            Message::NewCubeFound(cube_address) => {
+                if let Some((bridge_address, _slots)) = self.bridges.pop() {
+                    if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(&bridge_address) {
+                        println!("sender={:?}", sender);
+                        sender.send(Message::NewCubeFound(cube_address)).unwrap();
+                    };
                 }
+            }
 
-                Message::Available(address, slots) => {
-                    bridges.push((address, slots));
-                    bridges.sort_by(|a, b| a.1.cmp(&b.1));
+            Message::Available(address, slots) => {
+                self.bridges.push((address, slots));
+                self.bridges.sort_by(|a, b| a.1.cmp(&b.1));
+            }
+
+            m @ Message::Connected(_, _) => self.to_cubes.send(m).unwrap(),
+
+            Message::SetLamp(cube_address, bridge_address, r, g, b) => {
+                if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(&bridge_address) {
+                    println!("sender={:?}", sender);
+                    sender.send(Message::SetLamp(cube_address, bridge_address, r, g, b)).unwrap();
                 }
+            }
 
-                m @ Message::Connected(_, _) => self.to_cubes.send(m).unwrap(),
-
-                _ => (),
-            };
+            _ => (),
         }
     }
 }
