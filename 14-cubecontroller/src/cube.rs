@@ -80,14 +80,14 @@ impl CubeManager {
                 }
 
                 e @ _ => {
-                    eprintln!("Unhandled message: {:?}", e);
+                    error!("Unhandled message: {:?}", e);
                 }
             }
         }
     }
 
     pub fn add_new(&mut self, bridge_address: String, cube_address: String) {
-        println!("add_new: bridge_address={:?}, cube_address={:?}", bridge_address, cube_address);
+        trace!("add_new: bridge_address={:?}, cube_address={:?}", bridge_address, cube_address);
         let to_bridge = self.to_bridge.clone();
         self.cubes
             .entry(cube_address.clone())

@@ -25,7 +25,7 @@ impl BridgeManager {
 
     pub fn start(&mut self) {
         let listener = TcpListener::bind("0.0.0.0:11111").unwrap();
-        println!("Server listening on port 11111");
+        info!("Server listening on port 11111");
 
         let (to_manager, from_bridge) = unbounded();
         {
@@ -42,13 +42,11 @@ impl BridgeManager {
                             };
                             senders_to_bridge.lock().unwrap().insert(address, to_bridge);
                             thread::spawn(move || {
-                                let mut bridge = Bridge::new(to_manager, from_manager, stream);
-                                println!("{:?}", bridge);
-                                bridge.start();
+                                Bridge::new(to_manager, from_manager, stream).start();
                             });
                         }
                         Err(e) => {
-                            eprintln!("Error: {}", e);
+                            error!("Error: {}", e);
                         }
                     }
                 }
@@ -68,7 +66,7 @@ impl BridgeManager {
             Message::NewCubeFound(cube_address) => {
                 if let Some((bridge_address, _slots)) = self.bridges.pop() {
                     if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(&bridge_address) {
-                        println!("sender={:?}", sender);
+                        trace!("sender={:?}", sender);
                         sender.send(Message::NewCubeFound(cube_address.clone())).unwrap();
                     };
                 }
@@ -85,7 +83,7 @@ impl BridgeManager {
 
             Message::SetLamp(cube_address, bridge_address, r, g, b) => {
                 if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(bridge_address) {
-                    println!("sender={:?}", sender);
+                    trace!("sender={:?}", sender);
                     sender
                         .send(Message::SetLamp(cube_address.clone(), bridge_address.clone(), *r, *g, *b))
                         .unwrap();

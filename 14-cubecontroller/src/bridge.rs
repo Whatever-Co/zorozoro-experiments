@@ -72,7 +72,7 @@ impl Bridge {
                 true
             }
             Err(_) => {
-                println!("An error occurred, terminating connection with {}", self.stream.peer_addr().unwrap());
+                error!("An error occurred, terminating connection with {}", self.stream.peer_addr().unwrap());
                 self.stream.shutdown(Shutdown::Both).unwrap();
                 false
             }
@@ -94,7 +94,7 @@ impl Bridge {
             let p = 1 + topic_len + 1;
             (address.to_string(), command, &data[p..p + payload_len])
         };
-        println!("address={:?}, command={:?}, payload={:?}", address, command, payload);
+        trace!("address={:?}, command={:?}, payload={:?}", address, command, payload);
         let message = match command {
             "newcube" => {
                 self.mode = BridgeMode::Scanner;
@@ -137,7 +137,7 @@ impl Bridge {
 
             &_ => Message::Unknown,
         };
-        println!("message={:?}", message);
+        trace!("message={:?}", message);
         self.to_manager.send(message).unwrap();
     }
 
@@ -150,7 +150,7 @@ impl Bridge {
                 buffer.extend(topic.as_bytes());
                 buffer.push(cube_address.len() as u8);
                 buffer.extend(cube_address.as_bytes());
-                println!("len={:?}, buffer={:?}", buffer.len(), buffer);
+                trace!("len={:?}, buffer={:?}", buffer.len(), buffer);
                 self.stream.write(&buffer).unwrap();
             }
 
@@ -162,7 +162,7 @@ impl Bridge {
                 let payload = vec![0x03, 0x00, 0x01, 0x01, r, g, b];
                 buffer.push(payload.len() as u8);
                 buffer.extend(payload);
-                println!("len={:?}, buffer={:?}", buffer.len(), buffer);
+                trace!("len={:?}, buffer={:?}", buffer.len(), buffer);
                 self.stream.write(&buffer).unwrap();
             }
 

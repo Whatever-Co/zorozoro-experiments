@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 mod bridge;
 mod bridge_manager;
 mod cube;
@@ -83,7 +86,7 @@ impl App {
     }
 
     fn on_press(&mut self, key: &Key) {
-        println!("on_press: {:?}", key);
+        trace!("on_press: {:?}", key);
         match key {
             Key::D1 => {
                 self.sender.as_ref().unwrap().try_send(Message::SetLampAll(255, 0, 0)).unwrap();
@@ -142,6 +145,9 @@ impl App {
 }
 
 fn main() {
+    env_logger::init();
+    info!("Starting up!");
+
     let gl_version = OpenGL::V3_3;
     let mut window: Window = WindowSettings::new("Cube Controller", [800, 600])
         .graphics_api(gl_version)
@@ -156,7 +162,7 @@ fn main() {
 
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
-        // println!("{:?}", e);
+        // trace!("{:?}", e);
         if let Some(args) = e.button_args() {
             app.input(&args);
         }
