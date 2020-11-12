@@ -40,14 +40,16 @@ pub struct CubeManager {
     cubes: HashMap<String, Cube>,
     to_bridge: Sender<Message>,
     from_bridge: Receiver<Message>,
+    to_ui: Sender<Message>,
 }
 
 impl CubeManager {
-    pub fn new(to_bridge: Sender<Message>, from_bridge: Receiver<Message>) -> CubeManager {
+    pub fn new(to_bridge: Sender<Message>, from_bridge: Receiver<Message>, to_ui: Sender<Message>) -> CubeManager {
         CubeManager {
             cubes: HashMap::new(),
             to_bridge,
             from_bridge,
+            to_ui,
         }
     }
 
@@ -55,7 +57,8 @@ impl CubeManager {
         loop {
             match self.from_bridge.recv().unwrap() {
                 Message::Connected(bridge_address, cube_address) => {
-                    self.add_new(bridge_address, cube_address);
+                    self.add_new(bridge_address.clone(), cube_address.clone());
+                    self.to_ui.try_send(Message::Connected(bridge_address, cube_address)).unwrap();
                 }
 
                 Message::Disconnected(_bridge_address, cube_address) => {
