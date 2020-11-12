@@ -40,16 +40,14 @@ pub struct CubeManager {
     cubes: HashMap<String, Cube>,
     to_bridge: Sender<Message>,
     from_bridge: Receiver<Message>,
-    to_ui: iced::futures::channel::mpsc::Sender<Message>,
 }
 
 impl CubeManager {
-    pub fn new(to_bridge: Sender<Message>, from_bridge: Receiver<Message>, to_ui: iced::futures::channel::mpsc::Sender<Message>) -> CubeManager {
+    pub fn new(to_bridge: Sender<Message>, from_bridge: Receiver<Message>) -> CubeManager {
         CubeManager {
             cubes: HashMap::new(),
             to_bridge,
             from_bridge,
-            to_ui,
         }
     }
 
@@ -66,7 +64,6 @@ impl CubeManager {
 
                 Message::BatteryInfo(cube_address, value) => {
                     self.cubes.entry(cube_address.clone()).and_modify(|cube| cube.set_battery(value));
-                    self.to_ui.try_send(Message::BatteryInfo(cube_address, value)).unwrap();
                 }
 
                 Message::SetLampAll(r, g, b) => {
