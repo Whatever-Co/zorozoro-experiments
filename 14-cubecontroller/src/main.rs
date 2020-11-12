@@ -55,31 +55,29 @@ impl App {
     }
 
     fn update(&mut self, _args: &UpdateArgs) {
-        if let Some(receiver) = &self.receiver {
-            for message in receiver.try_iter() {
-                match message {
-                    Message::Connected(_, cube_address) => {
-                        self.cubes.entry(cube_address.clone()).or_insert(Default::default());
-                    }
-
-                    Message::Disconnected(_, cube_address) => {
-                        self.cubes.remove(&cube_address);
-                    }
-
-                    Message::IDInfo(cube_address, id_info) => match id_info {
-                        IDInfo::PositionID(x, y, a) => {
-                            self.cubes.entry(cube_address).and_modify(|cube| {
-                                cube.x = From::from(x);
-                                cube.y = From::from(y);
-                                cube.a = From::from(a);
-                                println!("cube={:?}", cube);
-                            });
-                        }
-                        _ => (),
-                    },
-
-                    _ => (),
+        for message in self.receiver.as_ref().unwrap().try_iter() {
+            match message {
+                Message::Connected(_, cube_address) => {
+                    self.cubes.entry(cube_address.clone()).or_insert(Default::default());
                 }
+
+                Message::Disconnected(_, cube_address) => {
+                    self.cubes.remove(&cube_address);
+                }
+
+                Message::IDInfo(cube_address, id_info) => match id_info {
+                    IDInfo::PositionID(x, y, a) => {
+                        self.cubes.entry(cube_address).and_modify(|cube| {
+                            cube.x = From::from(x);
+                            cube.y = From::from(y);
+                            cube.a = From::from(a);
+                            println!("cube={:?}", cube);
+                        });
+                    }
+                    _ => (),
+                },
+
+                _ => (),
             }
         }
     }
