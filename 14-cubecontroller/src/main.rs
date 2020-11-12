@@ -4,14 +4,17 @@ mod cube;
 
 use bridge::{IDInfo, Message};
 use bridge_manager::BridgeManager;
-use crossbeam_channel::{unbounded, Receiver};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use cube::CubeManager;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
+use piston::input::{Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
-use std::collections::HashMap;
+use std::collections::{
+    hash_map::Entry::{Occupied, Vacant},
+    HashMap,
+};
 use std::thread;
 
 #[derive(Debug, Default)]
@@ -23,7 +26,9 @@ struct Cube {
 
 struct App {
     gl: GlGraphics,
+    sender: Option<Sender<Message>>,
     receiver: Option<Receiver<Message>>,
+    key_state: HashMap<Key, ButtonState>,
     cubes: HashMap<String, Cube>,
 }
 
@@ -31,7 +36,9 @@ impl App {
     fn new(gl_version: OpenGL) -> App {
         App {
             gl: GlGraphics::new(gl_version),
+            sender: None,
             receiver: None,
+            key_state: HashMap::with_capacity(256),
             cubes: HashMap::with_capacity(256),
         }
     }
@@ -51,7 +58,38 @@ impl App {
                 BridgeManager::new(to_cubes_sender, to_bridges_receiver).start();
             });
         }
+        self.sender = Some(to_cubes_sender);
         self.receiver = Some(to_ui_receiver);
+    }
+
+    fn input(&mut self, args: &ButtonArgs) {
+        match args.button {
+            Button::Keyboard(key) => match self.key_state.entry(key) {
+                Occupied(mut entry) => {
+                    let prev = entry.insert(args.state);
+                    if prev != args.state && args.state == ButtonState::Press {
+                        self.on_press(&key);
+                    }
+                }
+                Vacant(entry) => {
+                    entry.insert(args.state);
+                    if args.state == ButtonState::Press {
+                        self.on_press(&key);
+                    }
+                }
+            },
+            _ => (),
+        }
+    }
+
+    fn on_press(&mut self, key: &Key) {
+        println!("on_press: {:?}", key);
+        match key {
+            Key::D1 => {
+                self.sender.as_ref().unwrap().try_send(Message::SetLampAll(255, 0, 0)).unwrap();
+            }
+            _ => (),
+        }
     }
 
     fn update(&mut self, _args: &UpdateArgs) {
@@ -71,7 +109,6 @@ impl App {
                             cube.x = From::from(x);
                             cube.y = From::from(y);
                             cube.a = From::from(a);
-                            println!("cube={:?}", cube);
                         });
                     }
                     _ => (),
@@ -119,6 +156,10 @@ fn main() {
 
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
+        // println!("{:?}", e);
+        if let Some(args) = e.button_args() {
+            app.input(&args);
+        }
         if let Some(args) = e.update_args() {
             app.update(&args);
         }
