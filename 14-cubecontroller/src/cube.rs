@@ -12,7 +12,6 @@ pub struct Cube {
 
 impl Cube {
     pub fn set_lamp(&self, red: u8, green: u8, blue: u8) {
-        println!("set_lamp");
         self.to_bridge
             .send(Message::SetLamp(self.address.clone(), self.bridge.clone(), red, green, blue))
             .unwrap();
@@ -61,12 +60,17 @@ impl CubeManager {
                     self.to_ui.try_send(Message::Connected(bridge_address, cube_address)).unwrap();
                 }
 
-                Message::Disconnected(_bridge_address, cube_address) => {
+                Message::Disconnected(bridge_address, cube_address) => {
                     self.cubes.remove(&cube_address);
+                    self.to_ui.try_send(Message::Disconnected(bridge_address, cube_address)).unwrap();
                 }
 
                 Message::BatteryInfo(cube_address, value) => {
                     self.cubes.entry(cube_address.clone()).and_modify(|cube| cube.set_battery(value));
+                }
+
+                Message::IDInfo(cube_address, value) => {
+                    self.to_ui.try_send(Message::IDInfo(cube_address, value)).unwrap();
                 }
 
                 Message::SetLampAll(r, g, b) => {

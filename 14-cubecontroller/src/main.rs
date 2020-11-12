@@ -2,7 +2,7 @@ mod bridge;
 mod bridge_manager;
 mod cube;
 
-use bridge::Message;
+use bridge::{IDInfo, Message};
 use bridge_manager::BridgeManager;
 use crossbeam_channel::{unbounded, Receiver};
 use cube::CubeManager;
@@ -11,11 +11,20 @@ use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
+use std::collections::HashMap;
 use std::thread;
+
+#[derive(Debug, Default)]
+struct Cube {
+    x: f64,
+    y: f64,
+    a: f64,
+}
 
 struct App {
     gl: GlGraphics,
     receiver: Option<Receiver<Message>>,
+    cubes: HashMap<String, Cube>,
 }
 
 impl App {
@@ -23,6 +32,7 @@ impl App {
         App {
             gl: GlGraphics::new(gl_version),
             receiver: None,
+            cubes: HashMap::with_capacity(256),
         }
     }
 
@@ -44,18 +54,55 @@ impl App {
         self.receiver = Some(to_ui_receiver);
     }
 
-    fn update(&self, _args: &UpdateArgs) {
+    fn update(&mut self, _args: &UpdateArgs) {
         if let Some(receiver) = &self.receiver {
             for message in receiver.try_iter() {
-                println!("message={:?}", message);
+                match message {
+                    Message::Connected(_, cube_address) => {
+                        self.cubes.entry(cube_address.clone()).or_insert(Default::default());
+                    }
+
+                    Message::Disconnected(_, cube_address) => {
+                        self.cubes.remove(&cube_address);
+                    }
+
+                    Message::IDInfo(cube_address, id_info) => match id_info {
+                        IDInfo::PositionID(x, y, a) => {
+                            self.cubes.entry(cube_address).and_modify(|cube| {
+                                cube.x = From::from(x);
+                                cube.y = From::from(y);
+                                cube.a = From::from(a);
+                                println!("cube={:?}", cube);
+                            });
+                        }
+                        _ => (),
+                    },
+
+                    _ => (),
+                }
             }
         }
     }
 
     fn render(&mut self, args: &RenderArgs) {
-        self.gl.draw(args.viewport(), |_context, gl| {
-            graphics::clear([0.000, 0.684, 0.792, 1.0], gl);
-        });
+        let context = self.gl.draw_begin(args.viewport());
+
+        use graphics::*;
+
+        const TOIO_BLUE: [f32; 4] = [0.000, 0.684, 0.792, 1.0];
+        const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+
+        let gl = &mut self.gl;
+
+        clear(TOIO_BLUE, gl);
+
+        let square = rectangle::centered_square(0.0, 0.0, 15.0);
+        for (_, cube) in &self.cubes {
+            let transform = context.transform.trans(cube.x, cube.y).rot_deg(cube.a);
+            rectangle(WHITE, square, transform, gl);
+        }
+
+        self.gl.draw_end();
     }
 }
 
@@ -63,6 +110,7 @@ fn main() {
     let gl_version = OpenGL::V3_3;
     let mut window: Window = WindowSettings::new("Cube Controller", [800, 600])
         .graphics_api(gl_version)
+        .samples(4)
         .vsync(true)
         .exit_on_esc(true)
         .build()
