@@ -20,6 +20,8 @@ use std::collections::{
 };
 use std::thread;
 
+static COLORS: [[u8; 3]; 3] = [[255, 255, 0], [255, 0, 255], [0, 255, 255]];
+
 #[derive(Debug, Default)]
 struct Cube {
     x: f64,
@@ -33,6 +35,7 @@ struct App {
     receiver: Option<Receiver<Message>>,
     key_state: HashMap<Key, ButtonState>,
     cubes: HashMap<String, Cube>,
+    color_count: usize,
 }
 
 impl App {
@@ -43,6 +46,7 @@ impl App {
             receiver: None,
             key_state: HashMap::with_capacity(256),
             cubes: HashMap::with_capacity(256),
+            color_count: 0,
         }
     }
 
@@ -89,7 +93,9 @@ impl App {
         trace!("on_press: {:?}", key);
         match key {
             Key::D1 => {
-                self.sender.as_ref().unwrap().try_send(Message::SetLampAll(255, 0, 0)).unwrap();
+                let [r, g, b] = COLORS[self.color_count % COLORS.len()];
+                self.color_count = self.color_count + 1;
+                self.sender.as_ref().unwrap().try_send(Message::SetLampAll(r, g, b)).unwrap();
             }
             _ => (),
         }
@@ -173,4 +179,6 @@ fn main() {
             app.render(&args);
         }
     }
+
+    info!("Done!");
 }
