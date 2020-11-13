@@ -32,6 +32,12 @@ impl Cube {
             .send(Message::SetLamp(self.address.clone(), self.bridge.clone(), r, g, b))
             .unwrap();
     }
+
+    pub fn set_direction(&self, angle: u16) {
+        self.to_bridge
+            .send(Message::SetDirection(self.address.clone(), self.bridge.clone(), angle))
+            .unwrap();
+    }
 }
 
 #[derive(Debug)]
@@ -76,6 +82,12 @@ impl CubeManager {
                 Message::SetLampAll(r, g, b) => {
                     for cube in self.cubes.values() {
                         cube.set_lamp(r, g, b);
+                    }
+                }
+
+                Message::SetDirectionAll(angle) => {
+                    for cube in self.cubes.values() {
+                        cube.set_direction(angle);
                     }
                 }
 

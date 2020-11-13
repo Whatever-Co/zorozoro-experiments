@@ -35,7 +35,7 @@ struct App {
     receiver: Option<Receiver<Message>>,
     key_state: HashMap<Key, ButtonState>,
     cubes: HashMap<String, Cube>,
-    color_count: usize,
+    count: usize,
 }
 
 impl App {
@@ -46,7 +46,7 @@ impl App {
             receiver: None,
             key_state: HashMap::with_capacity(256),
             cubes: HashMap::with_capacity(256),
-            color_count: 0,
+            count: 0,
         }
     }
 
@@ -93,9 +93,14 @@ impl App {
         trace!("on_press: {:?}", key);
         match key {
             Key::D1 => {
-                let [r, g, b] = COLORS[self.color_count % COLORS.len()];
-                self.color_count = self.color_count + 1;
+                let [r, g, b] = COLORS[self.count % COLORS.len()];
+                self.count = self.count + 1;
                 self.sender.as_ref().unwrap().try_send(Message::SetLampAll(r, g, b)).unwrap();
+            }
+            Key::D2 => {
+                let angle = (self.count * 135) % 360;
+                self.count = self.count + 1;
+                self.sender.as_ref().unwrap().try_send(Message::SetDirectionAll(angle as u16)).unwrap();
             }
             _ => (),
         }

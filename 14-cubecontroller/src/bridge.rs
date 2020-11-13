@@ -1,4 +1,4 @@
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crossbeam_channel::{Receiver, Sender};
 use std::io::{self, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
@@ -29,6 +29,8 @@ pub enum Message {
     BatteryInfo(String, u8),
     SetLampAll(u8, u8, u8),
     SetLamp(String, String, u8, u8, u8),
+    SetDirectionAll(u16),
+    SetDirection(String, String, u16),
     Unknown,
 }
 
@@ -150,7 +152,7 @@ impl Bridge {
                 buffer.extend(topic.as_bytes());
                 buffer.push(cube_address.len() as u8);
                 buffer.extend(cube_address.as_bytes());
-                trace!("len={:?}, buffer={:?}", buffer.len(), buffer);
+                trace!("NewCubeFound: len={:?}, buffer={:?}", buffer.len(), buffer);
                 self.stream.write(&buffer).unwrap();
             }
 
@@ -162,7 +164,22 @@ impl Bridge {
                 let payload = vec![0x03, 0x00, 0x01, 0x01, r, g, b];
                 buffer.push(payload.len() as u8);
                 buffer.extend(payload);
-                trace!("len={:?}, buffer={:?}", buffer.len(), buffer);
+                trace!("SetLamp: len={:?}, buffer={:?}", buffer.len(), buffer);
+                self.stream.write(&buffer).unwrap();
+            }
+
+            Message::SetDirection(cube_address, _, angle) => {
+                let mut buffer = Vec::<u8>::with_capacity(64);
+                let topic = cube_address + "/motor";
+                buffer.push(topic.len() as u8);
+                buffer.extend(topic.as_bytes());
+                let mut payload = vec![0x03, 0x00, 5, 0, 100, 0, 0x00];
+                payload.write_u16::<LittleEndian>(0xffff).unwrap();
+                payload.write_u16::<LittleEndian>(0xffff).unwrap();
+                payload.write_u16::<LittleEndian>(angle).unwrap();
+                buffer.push(payload.len() as u8);
+                buffer.extend(payload);
+                trace!("SetDirection: len={:?}, buffer={:?}", buffer.len(), buffer);
                 self.stream.write(&buffer).unwrap();
             }
 
