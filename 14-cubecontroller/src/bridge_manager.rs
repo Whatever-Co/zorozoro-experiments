@@ -63,9 +63,9 @@ impl BridgeManager {
 
     fn process_message(&mut self, message: &Message) {
         match message {
-            Message::NewCubeFound(cube_address) => {
+            Message::NewCubeFound(_) => {
                 if let Some((bridge_address, _slots)) = self.bridges.pop() {
-                    self.send_message(&bridge_address, Message::NewCubeFound(cube_address.clone()));
+                    self.send_message(&bridge_address, message);
                 }
             }
 
@@ -78,13 +78,9 @@ impl BridgeManager {
                 self.to_cubes.send(m.clone()).unwrap()
             }
 
-            Message::SetLamp(cube_address, bridge_address, r, g, b) => {
-                let message = Message::SetLamp(cube_address.clone(), bridge_address.clone(), *r, *g, *b);
-                self.send_message(bridge_address, message);
-            }
-
-            Message::SetDirection(cube_address, bridge_address, angle) => {
-                let message = Message::SetDirection(cube_address.clone(), bridge_address.clone(), *angle);
+            Message::SetLamp(_, bridge_address, _, _, _)
+            | Message::SetDirection(_, bridge_address, _)
+            | Message::MoveToTarget(_, bridge_address, _, _) => {
                 self.send_message(bridge_address, message);
             }
 
@@ -92,9 +88,9 @@ impl BridgeManager {
         }
     }
 
-    fn send_message(&mut self, bridge_address: &String, message: Message) {
+    fn send_message(&mut self, bridge_address: &String, message: &Message) {
         if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(bridge_address) {
-            sender.send(message).unwrap();
+            sender.send(message.clone()).unwrap();
         }
     }
 }

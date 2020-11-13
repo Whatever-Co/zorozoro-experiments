@@ -31,6 +31,8 @@ pub enum Message {
     SetLamp(String, String, u8, u8, u8),
     SetDirectionAll(u16),
     SetDirection(String, String, u16),
+    StartGoAround,
+    MoveToTarget(String, String, u16, u16),
     Unknown,
 }
 
@@ -139,7 +141,7 @@ impl Bridge {
 
             &_ => Message::Unknown,
         };
-        trace!("message={:?}", message);
+        // trace!("message={:?}", message);
         self.to_manager.send(message).unwrap();
     }
 
@@ -177,6 +179,21 @@ impl Bridge {
                 payload.write_u16::<LittleEndian>(0xffff).unwrap();
                 payload.write_u16::<LittleEndian>(0xffff).unwrap();
                 payload.write_u16::<LittleEndian>(angle).unwrap();
+                buffer.push(payload.len() as u8);
+                buffer.extend(payload);
+                trace!("SetDirection: len={:?}, buffer={:?}", buffer.len(), buffer);
+                self.stream.write(&buffer).unwrap();
+            }
+
+            Message::MoveToTarget(cube_address, _, x, y) => {
+                let mut buffer = Vec::<u8>::with_capacity(64);
+                let topic = cube_address + "/motor";
+                buffer.push(topic.len() as u8);
+                buffer.extend(topic.as_bytes());
+                let mut payload = vec![0x03, 0x00, 5, 0, 20, 0, 0x00];
+                payload.write_u16::<LittleEndian>(x).unwrap();
+                payload.write_u16::<LittleEndian>(y).unwrap();
+                payload.write_u16::<LittleEndian>(0x05 << 13).unwrap();
                 buffer.push(payload.len() as u8);
                 buffer.extend(payload);
                 trace!("SetDirection: len={:?}, buffer={:?}", buffer.len(), buffer);

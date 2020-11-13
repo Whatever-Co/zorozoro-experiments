@@ -10,7 +10,7 @@ use bridge_manager::BridgeManager;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use cube::CubeManager;
 use glutin_window::GlutinWindow as Window;
-use nalgebra::{Isometry2, Point2, Translation2, Vector2};
+use nalgebra::{Isometry2, Point2, Vector2};
 use ncollide2d::pipeline::{CollisionGroups, CollisionObjectSlabHandle, GeometricQueryType};
 use ncollide2d::query::Ray;
 use ncollide2d::shape::{Cuboid, ShapeHandle};
@@ -114,6 +114,9 @@ impl App {
                 self.count = self.count + 1;
                 self.sender.as_ref().unwrap().try_send(Message::SetDirectionAll(angle as u16)).unwrap();
             }
+            Key::D3 => {
+                self.sender.as_ref().unwrap().try_send(Message::StartGoAround).unwrap();
+            }
             _ => (),
         }
     }
@@ -202,7 +205,7 @@ impl App {
 
             if let Some(obj) = self.world.get_mut(cube.handle) {
                 let a = (CUBE_SIZE / 2.0) as f32;
-                let len = (30.0 * DOTS_PER_METER) as f32;
+                let len = (0.030 * DOTS_PER_METER) as f32; // forward 30mm
                 let ray = Ray::new(Point2::new(0.0, a + 1.0), Vector2::new(0.0, 1.0)).transform_by(obj.position());
                 let color = match self.world.first_interference_with_ray(&ray, len, &self.collision_group) {
                     Some(hit) => {
