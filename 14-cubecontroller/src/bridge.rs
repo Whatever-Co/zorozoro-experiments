@@ -4,7 +4,7 @@ use std::io::{self, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::{thread, time};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BridgeMode {
     Bridge,
     Scanner,
