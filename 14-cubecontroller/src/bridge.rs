@@ -27,6 +27,7 @@ pub enum Message {
     Disconnected(String, String),
     IDInfo(String, IDInfo),
     BatteryInfo(String, u8),
+    ShowBatteryInfoAll,
     SetLampAll(u8, u8, u8),
     SetLamp(String, String, u8, u8, u8),
     StopMotor(String, String),
@@ -116,12 +117,11 @@ impl Bridge {
             }
 
             "available" => {
-                let prev = self.mode;
-                self.mode = BridgeMode::Bridge;
-                let slots = payload[0] as usize;
-                if prev != self.mode {
+                if self.mode == BridgeMode::Unknown {
                     info!("{} is bridge!", self.address);
                 }
+                self.mode = BridgeMode::Bridge;
+                let slots = payload[0] as usize;
                 info!("Available slots of {} is {}", self.address, slots);
                 Message::Available(self.address.clone(), slots)
             }

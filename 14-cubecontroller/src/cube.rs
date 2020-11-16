@@ -35,8 +35,8 @@ impl Cube {
             .unwrap();
     }
 
-    pub fn set_battery(&mut self, value: u8) {
-        if value == self.battery {
+    pub fn set_battery(&mut self, value: u8, force: bool) {
+        if value == self.battery && !force {
             return;
         }
         self.battery = value;
@@ -183,7 +183,7 @@ impl CubeManager {
             }
 
             Message::BatteryInfo(cube_address, value) => {
-                self.cubes.entry(cube_address.clone()).and_modify(|cube| cube.set_battery(*value));
+                self.cubes.entry(cube_address.clone()).and_modify(|cube| cube.set_battery(*value, false));
             }
 
             Message::IDInfo(cube_address, id_info) => {
@@ -207,6 +207,11 @@ impl CubeManager {
                 self.to_ui.try_send(message.clone()).unwrap();
             }
 
+            Message::ShowBatteryInfoAll => {
+                for cube in self.cubes.values_mut() {
+                    cube.set_battery(cube.battery, true);
+                }
+            }
             Message::SetLampAll(r, g, b) => {
                 for cube in self.cubes.values() {
                     cube.set_lamp(*r, *g, *b);
@@ -254,7 +259,7 @@ impl CubeManager {
                     bridge: bridge_address,
                     to_bridge: self.to_bridge.clone(),
                     battery: 0,
-                    going_around: true,
+                    going_around: false,
                     last_move: Instant::now(),
                     handle,
                     hit: false,

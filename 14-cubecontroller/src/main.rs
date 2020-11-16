@@ -97,16 +97,19 @@ impl App<'_> {
         trace!("on_press: {:?}", key);
         match key {
             Key::D1 => {
+                self.sender.as_ref().unwrap().try_send(Message::ShowBatteryInfoAll).unwrap();
+            }
+            Key::D2 => {
                 let [r, g, b] = COLORS[self.count % COLORS.len()];
                 self.count = self.count + 1;
                 self.sender.as_ref().unwrap().try_send(Message::SetLampAll(r, g, b)).unwrap();
             }
-            Key::D2 => {
+            Key::D3 => {
                 let angle = (self.count * 135) % 360;
                 self.count = self.count + 1;
                 self.sender.as_ref().unwrap().try_send(Message::SetDirectionAll(angle as u16)).unwrap();
             }
-            Key::D3 => {
+            Key::D5 => {
                 self.sender.as_ref().unwrap().try_send(Message::StartGoAround).unwrap();
             }
             _ => (),
@@ -146,7 +149,7 @@ impl App<'_> {
                 },
 
                 Message::HitStateChanged(cube_address, hit) => {
-                    info!("hit state changed: {:?}, {:?}", cube_address, hit);
+                    debug!("Hit state changed: {:?}, {:?}", cube_address, hit);
                     self.cubes.entry(cube_address).and_modify(|cube| cube.hit = hit);
                 }
 
