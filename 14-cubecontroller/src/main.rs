@@ -11,7 +11,7 @@ use crossbeam_channel::{unbounded, Receiver, Sender};
 use cube::CubeManager;
 use env_logger::{Builder, Env};
 use glutin_window::GlutinWindow as Window;
-use opengl_graphics::{GlGraphics, OpenGL};
+use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
@@ -31,17 +31,18 @@ struct Cube {
     hit: bool,
 }
 
-struct App {
+struct App<'a> {
     gl: GlGraphics,
     sender: Option<Sender<Message>>,
     receiver: Option<Receiver<Message>>,
     key_state: HashMap<Key, ButtonState>,
     cubes: HashMap<String, Cube>,
     count: usize,
+    glyph_cache: GlyphCache<'a>,
 }
 
-impl App {
-    fn new(gl_version: OpenGL) -> App {
+impl App<'_> {
+    fn new(gl_version: OpenGL) -> App<'static> {
         App {
             gl: GlGraphics::new(gl_version),
             sender: None,
@@ -49,6 +50,7 @@ impl App {
             key_state: HashMap::with_capacity(256),
             cubes: HashMap::with_capacity(256),
             count: 0,
+            glyph_cache: GlyphCache::new("assets/RobotoCondensed-Regular.ttf", (), TextureSettings::new()).unwrap(),
         }
     }
 
@@ -154,8 +156,6 @@ impl App {
     }
 
     fn render(&mut self, args: &RenderArgs) {
-        let context = self.gl.draw_begin(args.viewport());
-
         use graphics::*;
 
         const TOIO_BLUE: [f32; 4] = [0.000, 0.684, 0.792, 1.0];
@@ -163,6 +163,7 @@ impl App {
         const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
         const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 
+        let context = self.gl.draw_begin(args.viewport());
         let gl = &mut self.gl;
 
         clear(TOIO_BLUE, gl);
@@ -179,7 +180,25 @@ impl App {
             line_from_to(color, 1.0, start, end, transform, gl);
         }
 
+        self.draw_text(&context, 10.0, 40.0, 30, &WHITE, "ZOROZORO Controller");
+
+        const MENU_TEXT: &str = "1. Battery Status\n2. Random Color\n3. Random Rotate\n4. Look Center\n5. Go Around\n6. Stop\n0. Shutdown";
+        let mut y = 45.0;
+        for line in MENU_TEXT.split("\n").collect::<Vec<_>>().iter() {
+            y += 25.0;
+            self.draw_text(&context, 10.0, y, 18, &WHITE, line);
+        }
+
         self.gl.draw_end();
+    }
+
+    fn draw_text(&mut self, context: &graphics::Context, x: f64, y: f64, size: u32, color: &[f32; 4], s: &str) {
+        use graphics::*;
+        let gl = &mut self.gl;
+        let glyph_cache = &mut self.glyph_cache;
+        text::Text::new_color(*color, size)
+            .draw(s, glyph_cache, &DrawState::default(), context.transform.trans(x, y), gl)
+            .unwrap();
     }
 }
 
