@@ -73,12 +73,13 @@ impl Bridge {
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
                 if let Some(message) = self.from_manager.try_recv().ok() {
                     self.send_message(message);
+                } else {
+                    thread::sleep(time::Duration::from_millis(10));
                 }
-                thread::sleep(time::Duration::from_millis(10));
                 true
             }
             Err(_) => {
-                error!("An error occurred, terminating connection with {}", self.stream.peer_addr().unwrap());
+                error!("An error occurred, terminating connection with {}", self.address);
                 self.stream.shutdown(Shutdown::Both).unwrap();
                 false
             }
@@ -110,18 +111,30 @@ impl Bridge {
             "newcube" => {
                 self.mode = BridgeMode::Scanner;
                 let address = std::str::from_utf8(payload).unwrap().to_string();
+                info!("Found Cube {}", address);
                 Message::NewCubeFound(address)
             }
 
             "available" => {
+                let prev = self.mode;
                 self.mode = BridgeMode::Bridge;
                 let slots = payload[0] as usize;
+                if prev != self.mode {
+                    info!("{} is bridge!", self.address);
+                }
+                info!("Available slots of {} is {}", self.address, slots);
                 Message::Available(self.address.clone(), slots)
             }
 
-            "connected" => Message::Connected(self.address.clone(), address),
+            "connected" => {
+                info!("Cube {} connected", address);
+                Message::Connected(self.address.clone(), address)
+            }
 
-            "disconnected" => Message::Disconnected(self.address.clone(), address),
+            "disconnected" => {
+                info!("Cube {} disconnected", address);
+                Message::Disconnected(self.address.clone(), address)
+            }
 
             "position" => match payload[0] {
                 1 => {
