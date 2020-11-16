@@ -14,9 +14,16 @@ pub const DOTS_PER_METER: f64 = 411.0 / 0.560;
 pub const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
 pub const HIT_LEN: f64 = 0.020 * DOTS_PER_METER; // 20mm
 
-const MAT_MIN: [f32; 2] = [98.0, 142.0];
-const MAT_MAX: [f32; 2] = [402.0, 358.0];
+// #01
+// const MAT_MIN: [f32; 2] = [98.0, 142.0];
+// const MAT_MAX: [f32; 2] = [402.0, 358.0];
+// #05-12
+const MAT_MIN: [f32; 2] = [340.0, 35.0];
+const MAT_MAX: [f32; 2] = [949.0, 898.0];
+const MAT_SIZE: [f32; 2] = [MAT_MAX[0] - MAT_MIN[0], MAT_MAX[1] - MAT_MIN[1]];
 const MAT_CENTER: [f32; 2] = [(MAT_MIN[0] + MAT_MAX[0]) / 2.0, (MAT_MIN[1] + MAT_MAX[1]) / 2.0];
+const MIN_RADIUS: f32 = 50.0;
+const MAX_RADIUS: f32 = MAT_SIZE[0] / 2.0;
 
 #[derive(Debug)]
 pub struct Cube {
@@ -86,9 +93,7 @@ impl Cube {
     }
 
     fn send_next_move(&mut self) {
-        const MIN_RADIUS: f32 = 50.0;
-        const MAX_RADIUS: f32 = 100.0;
-        const SPACING: f32 = 35.0;
+        const SPACING: f32 = 33.0;
         let p = Vector2::new(MAT_CENTER[0] - self.position.x, MAT_CENTER[1] - self.position.y);
         let r = nalgebra::clamp(p.norm(), MIN_RADIUS, MAX_RADIUS);
         let radius = ((r - MIN_RADIUS) / SPACING).round() * SPACING + MIN_RADIUS;
