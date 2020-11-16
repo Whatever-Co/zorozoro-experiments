@@ -75,7 +75,7 @@ impl BridgeManager {
             }
 
             m @ Message::Connected(_, _) | m @ Message::Disconnected(_, _) | m @ Message::IDInfo(_, _) | m @ Message::BatteryInfo(_, _) => {
-                self.to_cubes.send(m.clone()).unwrap()
+                self.to_cubes.try_send(m.clone()).unwrap()
             }
 
             Message::SetLamp(_, bridge_address, _, _, _)
@@ -90,7 +90,7 @@ impl BridgeManager {
 
     fn send_message(&mut self, bridge_address: &String, message: &Message) {
         if let Some(sender) = self.senders_to_bridge.lock().unwrap().get(bridge_address) {
-            sender.send(message.clone()).unwrap();
+            sender.try_send(message.clone()).unwrap();
         }
     }
 }

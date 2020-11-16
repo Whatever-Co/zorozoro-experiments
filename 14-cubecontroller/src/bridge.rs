@@ -33,6 +33,7 @@ pub enum Message {
     SetDirection(String, String, u16),
     StartGoAround,
     MoveToTarget(String, String, u16, u16),
+    HitStateChanged(String, bool),
     Unknown,
 }
 

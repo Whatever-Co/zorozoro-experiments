@@ -1,14 +1,17 @@
 use crate::bridge::{IDInfo, Message};
 use crossbeam_channel::{Receiver, Sender};
-use nalgebra::Vector2;
-use std::collections::{
-    hash_map::Entry::{Occupied, Vacant},
-    HashMap,
-};
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
+use nalgebra::{Isometry2, Point2, Vector2};
+use ncollide2d::pipeline::{CollisionGroups, CollisionObjectSlabHandle, GeometricQueryType};
+use ncollide2d::query::Ray;
+use ncollide2d::shape::{Cuboid, ShapeHandle};
+use ncollide2d::world::CollisionWorld;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::collections::HashMap;
+use std::thread;
+use std::time::{Duration, Instant};
+
+const DOTS_PER_METER: f64 = 411.0 / 0.560;
+const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
 
 #[derive(Debug)]
 pub struct Cube {
@@ -20,6 +23,8 @@ pub struct Cube {
     battery: u8,
     going_around: bool,
     last_move: Instant,
+    handle: CollisionObjectSlabHandle,
+    hit: bool,
 }
 
 impl Cube {
@@ -68,14 +73,14 @@ impl Cube {
         let radius = ((r - MIN_RADIUS) / SPACING).round() * SPACING + MIN_RADIUS;
         let start_angle = p.y.atan2(p.x);
         const DISTANCE: f32 = 50.0;
-        let C = 2.0 * radius * std::f32::consts::PI;
-        let end_angle = start_angle + DISTANCE / C * std::f32::consts::TAU;
+        let c = 2.0 * radius * std::f32::consts::PI;
+        let end_angle = start_angle + DISTANCE / c * std::f32::consts::TAU;
         let target_x = -end_angle.cos() * radius + mat_center.x;
         let target_y = -end_angle.sin() * radius + mat_center.y;
         trace!(
             "radius={:?}, C={}, start_angle={:?}, end_angle={:?}, x={:?}, y={:?}",
             radius,
-            C,
+            c,
             start_angle,
             end_angle,
             target_x,
@@ -102,12 +107,13 @@ impl Cube {
     }
 }
 
-#[derive(Debug)]
 pub struct CubeManager {
     cubes: HashMap<String, Cube>,
     to_bridge: Sender<Message>,
     from_bridge: Receiver<Message>,
     to_ui: Sender<Message>,
+    world: CollisionWorld<f32, ()>,
+    collision_group: CollisionGroups,
 }
 
 impl CubeManager {
@@ -117,6 +123,8 @@ impl CubeManager {
             to_bridge,
             from_bridge,
             to_ui,
+            world: CollisionWorld::new(0.01),
+            collision_group: CollisionGroups::new(),
         }
     }
 
@@ -128,6 +136,20 @@ impl CubeManager {
 
             for cube in self.cubes.values_mut() {
                 cube.tick();
+            }
+            self.world.update();
+
+            for cube in self.cubes.values_mut() {
+                if let Some(obj) = self.world.get_mut(cube.handle) {
+                    let a = (CUBE_SIZE / 2.0) as f32;
+                    let len = (0.030 * DOTS_PER_METER) as f32; // forward 30mm
+                    let ray = Ray::new(Point2::new(0.0, a + 1.0), Vector2::new(0.0, 1.0)).transform_by(obj.position());
+                    let hit = self.world.first_interference_with_ray(&ray, len, &self.collision_group).is_some();
+                    if hit != cube.hit {
+                        cube.hit = hit;
+                        self.to_ui.try_send(Message::HitStateChanged(cube.address.clone(), hit)).unwrap();
+                    }
+                }
             }
 
             thread::sleep(Duration::from_millis(50));
@@ -142,7 +164,9 @@ impl CubeManager {
             }
 
             Message::Disconnected(_bridge_address, cube_address) => {
-                self.cubes.remove(cube_address);
+                if let Some(cube) = self.cubes.remove(cube_address) {
+                    self.world.remove(&[cube.handle]);
+                }
                 self.to_ui.try_send(message.clone()).unwrap();
             }
 
@@ -155,8 +179,14 @@ impl CubeManager {
                     IDInfo::PositionID(x, y, a) => match self.cubes.entry(cube_address.to_string()) {
                         Occupied(mut entry) => {
                             let mut cube = entry.get_mut();
-                            cube.position = Vector2::new(*x as f32, *y as f32);
-                            cube.rotation = *a as f32;
+                            let x = *x as f32;
+                            let y = *y as f32;
+                            let a = *a as f32;
+                            cube.position = Vector2::new(x, y);
+                            cube.rotation = a;
+                            if let Some(object) = self.world.get_mut(cube.handle) {
+                                object.set_position(Isometry2::new(Vector2::new(x, y), (a + 270.0).to_radians()));
+                            }
                         }
                         Vacant(_) => (),
                     },
@@ -191,19 +221,33 @@ impl CubeManager {
 
     pub fn add_new(&mut self, bridge_address: String, cube_address: String) {
         trace!("add_new: bridge_address={:?}, cube_address={:?}", bridge_address, cube_address);
-        let to_bridge = self.to_bridge.clone();
-        self.cubes
-            .entry(cube_address.clone())
-            .and_modify(|cube| cube.bridge = bridge_address.clone())
-            .or_insert_with(|| Cube {
-                position: Vector2::new(0.0, 0.0),
-                rotation: 0.0,
-                address: cube_address,
-                bridge: bridge_address,
-                to_bridge: to_bridge,
-                battery: 0,
-                going_around: true,
-                last_move: Instant::now(),
-            });
+        match self.cubes.entry(cube_address.clone()) {
+            Occupied(mut entry) => {
+                let cube = entry.get_mut();
+                cube.bridge = bridge_address;
+            }
+            Vacant(entry) => {
+                let size = (CUBE_SIZE / 2.0) as f32;
+                let (handle, _) = self.world.add(
+                    Isometry2::new(Vector2::new(0.0, 0.0), 0.0),
+                    ShapeHandle::new(Cuboid::new(Vector2::new(size, size))),
+                    self.collision_group,
+                    GeometricQueryType::Contacts(0.0, 0.0),
+                    (),
+                );
+                entry.insert(Cube {
+                    position: Vector2::new(0.0, 0.0),
+                    rotation: 0.0,
+                    address: cube_address,
+                    bridge: bridge_address,
+                    to_bridge: self.to_bridge.clone(),
+                    battery: 0,
+                    going_around: true,
+                    last_move: Instant::now(),
+                    handle,
+                    hit: false,
+                });
+            }
+        }
     }
 }
