@@ -181,12 +181,16 @@ impl App<'_> {
         }
 
         self.draw_text(&context, 10.0, 40.0, 30, &WHITE, "ZOROZORO Controller");
-
-        const MENU_TEXT: &str = "1. Battery Status\n2. Random Color\n3. Random Rotate\n4. Look Center\n5. Go Around\n6. Stop\n0. Shutdown";
-        let mut y = 45.0;
-        for line in MENU_TEXT.split("\n").collect::<Vec<_>>().iter() {
-            y += 25.0;
-            self.draw_text(&context, 10.0, y, 18, &WHITE, line);
+        // self.draw_text(&context, 10.0, 70.0, 18, &WHITE, &format!("Bridges: {}", self.cubes.len()));
+        self.draw_text(&context, 10.0, 70.0, 18, &WHITE, &format!("Cubes: {}", self.cubes.len()));
+        {
+            const MENU_TEXT: &str = "1. Battery Status\n2. Random Color\n3. Random Rotate\n4. Look Center\n5. Go Around\n6. Stop\n0. Shutdown";
+            let lines = MENU_TEXT.split("\n").collect::<Vec<_>>();
+            let mut y = args.viewport().window_size[1] - 25.0 * (lines.len() as f64) - 10.0;
+            for line in lines.iter() {
+                y += 25.0;
+                self.draw_text(&context, 10.0, y, 18, &WHITE, line);
+            }
         }
 
         self.gl.draw_end();
