@@ -56,6 +56,12 @@ impl Cube {
             .unwrap();
     }
 
+    pub fn stop_motor(&self) {
+        self.to_bridge
+            .send(Message::StopMotor(self.address.clone(), self.bridge.clone()))
+            .unwrap();
+    }
+
     pub fn start_go_around(&mut self) {
         self.going_around = true;
         self.last_move = Instant::now();
@@ -72,7 +78,7 @@ impl Cube {
         let r = nalgebra::clamp(p.norm(), MIN_RADIUS, MAX_RADIUS);
         let radius = ((r - MIN_RADIUS) / SPACING).round() * SPACING + MIN_RADIUS;
         let start_angle = p.y.atan2(p.x);
-        const DISTANCE: f32 = 50.0;
+        const DISTANCE: f32 = 50.0; // TODO: calculate distance from speed
         let c = 2.0 * radius * std::f32::consts::PI;
         let end_angle = start_angle + DISTANCE / c * std::f32::consts::TAU;
         let target_x = -end_angle.cos() * radius + mat_center.x;
@@ -97,7 +103,7 @@ impl Cube {
     }
 
     pub fn tick(&mut self) {
-        if self.going_around {
+        if self.going_around && !self.hit {
             let now = Instant::now();
             if (now - self.last_move).as_millis() >= 500 {
                 self.send_next_move();
@@ -147,6 +153,9 @@ impl CubeManager {
                     let hit = self.world.first_interference_with_ray(&ray, len, &self.collision_group).is_some();
                     if hit != cube.hit {
                         cube.hit = hit;
+                        if hit {
+                            cube.stop_motor();
+                        }
                         self.to_ui.try_send(Message::HitStateChanged(cube.address.clone(), hit)).unwrap();
                     }
                 }

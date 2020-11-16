@@ -80,7 +80,8 @@ impl BridgeManager {
 
             Message::SetLamp(_, bridge_address, _, _, _)
             | Message::SetDirection(_, bridge_address, _)
-            | Message::MoveToTarget(_, bridge_address, _, _) => {
+            | Message::MoveToTarget(_, bridge_address, _, _)
+            | Message::StopMotor(_, bridge_address) => {
                 self.send_message(bridge_address, message);
             }
 

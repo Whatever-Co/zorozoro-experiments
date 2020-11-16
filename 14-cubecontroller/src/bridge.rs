@@ -29,6 +29,7 @@ pub enum Message {
     BatteryInfo(String, u8),
     SetLampAll(u8, u8, u8),
     SetLamp(String, String, u8, u8, u8),
+    StopMotor(String, String),
     SetDirectionAll(u16),
     SetDirection(String, String, u16),
     StartGoAround,
@@ -191,13 +192,25 @@ impl Bridge {
                 let topic = cube_address + "/motor";
                 buffer.push(topic.len() as u8);
                 buffer.extend(topic.as_bytes());
-                let mut payload = vec![0x03, 0x00, 5, 0, 20, 0, 0x00];
+                let mut payload = vec![0x03, 0x00, 1, 1, 20, 0, 0x00];
                 payload.write_u16::<LittleEndian>(x).unwrap();
                 payload.write_u16::<LittleEndian>(y).unwrap();
                 payload.write_u16::<LittleEndian>(0x05 << 13).unwrap();
                 buffer.push(payload.len() as u8);
                 buffer.extend(payload);
                 trace!("SetDirection: len={:?}, buffer={:?}", buffer.len(), buffer);
+                self.stream.write(&buffer).unwrap();
+            }
+
+            Message::StopMotor(cube_address, _) => {
+                let mut buffer = Vec::<u8>::with_capacity(64);
+                let topic = cube_address + "/motor";
+                buffer.push(topic.len() as u8);
+                buffer.extend(topic.as_bytes());
+                let payload = vec![0x01, 0x01, 0x01, 0, 0x02, 0x01, 0];
+                buffer.push(payload.len() as u8);
+                buffer.extend(payload);
+                trace!("StopMotor: len={:?}, buffer={:?}", buffer.len(), buffer);
                 self.stream.write(&buffer).unwrap();
             }
 
