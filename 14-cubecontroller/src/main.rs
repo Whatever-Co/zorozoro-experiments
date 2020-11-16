@@ -109,8 +109,14 @@ impl App<'_> {
                 self.count = self.count + 1;
                 self.sender.as_ref().unwrap().try_send(Message::SetDirectionAll(angle as u16)).unwrap();
             }
+            Key::D4 => {
+                self.sender.as_ref().unwrap().try_send(Message::LookCenterAll).unwrap();
+            }
             Key::D5 => {
                 self.sender.as_ref().unwrap().try_send(Message::StartGoAround).unwrap();
+            }
+            Key::D6 => {
+                self.sender.as_ref().unwrap().try_send(Message::StopAll).unwrap();
             }
             _ => (),
         }
@@ -119,32 +125,34 @@ impl App<'_> {
     fn update(&mut self, _args: &UpdateArgs) {
         for message in self.receiver.as_mut().unwrap().try_iter() {
             match message {
-                Message::Connected(_, cube_address) => match self.cubes.entry(cube_address) {
-                    Occupied(_) => (),
-                    Vacant(entry) => {
-                        entry.insert(Cube {
-                            x: 0.0,
-                            y: 0.0,
-                            a: 0.0,
-                            hit: false,
-                        });
-                    }
-                },
+                Message::Connected(_, cube_address) => {
+                    self.cubes.entry(cube_address).or_insert_with(|| Cube {
+                        x: -999.9,
+                        y: -999.9,
+                        a: 0.0,
+                        hit: false,
+                    });
+                }
 
                 Message::Disconnected(_, cube_address) => {
                     self.cubes.remove(&cube_address);
                 }
 
                 Message::IDInfo(cube_address, id_info) => match id_info {
-                    IDInfo::PositionID(x, y, a) => match self.cubes.entry(cube_address) {
-                        Occupied(mut entry) => {
-                            let cube = entry.get_mut();
+                    IDInfo::PositionID(x, y, a) => {
+                        self.cubes.entry(cube_address).and_modify(|cube| {
                             cube.x = From::from(x);
                             cube.y = From::from(y);
                             cube.a = From::from(a);
-                        }
-                        Vacant(_) => (),
-                    },
+                        });
+                    }
+                    IDInfo::PositionIDMissed => {
+                        self.cubes.entry(cube_address).and_modify(|cube| {
+                            cube.x = -999.9;
+                            cube.y = -999.9;
+                            cube.a = 0.0;
+                        });
+                    }
                     _ => (),
                 },
 

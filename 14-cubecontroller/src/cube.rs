@@ -14,6 +14,10 @@ pub const DOTS_PER_METER: f64 = 411.0 / 0.560;
 pub const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
 pub const HIT_LEN: f64 = 0.020 * DOTS_PER_METER; // 20mm
 
+const MAT_MIN: [f32; 2] = [98.0, 142.0];
+const MAT_MAX: [f32; 2] = [402.0, 358.0];
+const MAT_CENTER: [f32; 2] = [(MAT_MIN[0] + MAT_MAX[0]) / 2.0, (MAT_MIN[1] + MAT_MAX[1]) / 2.0];
+
 #[derive(Debug)]
 pub struct Cube {
     position: Vector2<f32>,
@@ -51,10 +55,18 @@ impl Cube {
             .unwrap();
     }
 
-    pub fn set_direction(&self, angle: u16) {
+    pub fn set_direction(&mut self, angle: u16) {
+        self.going_around = false;
         self.to_bridge
             .send(Message::SetDirection(self.address.clone(), self.bridge.clone(), angle))
             .unwrap();
+    }
+
+    pub fn look_center(&mut self) {
+        let x = MAT_CENTER[0] - self.position.x;
+        let y = MAT_CENTER[1] - self.position.y;
+        let a = y.atan2(x).to_degrees();
+        self.set_direction((a + 270.0) as u16);
     }
 
     pub fn stop_motor(&self) {
@@ -68,22 +80,24 @@ impl Cube {
         self.last_move = Instant::now();
     }
 
+    pub fn stop_go_around(&mut self) {
+        self.going_around = false;
+        self.stop_motor();
+    }
+
     fn send_next_move(&mut self) {
-        let mat_min = Vector2::new(98.0, 142.0);
-        let mat_max = Vector2::new(402.0, 358.0);
-        let mat_center = (mat_min + mat_max) / 2.0;
         const MIN_RADIUS: f32 = 50.0;
         const MAX_RADIUS: f32 = 100.0;
         const SPACING: f32 = 35.0;
-        let p = mat_center - self.position;
+        let p = Vector2::new(MAT_CENTER[0] - self.position.x, MAT_CENTER[1] - self.position.y);
         let r = nalgebra::clamp(p.norm(), MIN_RADIUS, MAX_RADIUS);
         let radius = ((r - MIN_RADIUS) / SPACING).round() * SPACING + MIN_RADIUS;
         let start_angle = p.y.atan2(p.x);
         const DISTANCE: f32 = 50.0; // TODO: calculate distance from speed
         let c = 2.0 * radius * std::f32::consts::PI;
         let end_angle = start_angle + DISTANCE / c * std::f32::consts::TAU;
-        let target_x = -end_angle.cos() * radius + mat_center.x;
-        let target_y = -end_angle.sin() * radius + mat_center.y;
+        let target_x = -end_angle.cos() * radius + MAT_CENTER[0];
+        let target_y = -end_angle.sin() * radius + MAT_CENTER[1];
         // trace!(
         //     "radius={:?}, C={}, start_angle={:?}, end_angle={:?}, x={:?}, y={:?}",
         //     radius,
@@ -191,13 +205,20 @@ impl CubeManager {
                     IDInfo::PositionID(x, y, a) => match self.cubes.entry(cube_address.to_string()) {
                         Occupied(mut entry) => {
                             let mut cube = entry.get_mut();
-                            let x = *x as f32;
-                            let y = *y as f32;
-                            let a = *a as f32;
-                            cube.position = Vector2::new(x, y);
-                            cube.rotation = a;
+                            cube.position = Vector2::new(*x as f32, *y as f32);
+                            cube.rotation = *a as f32;
                             if let Some(object) = self.world.get_mut(cube.handle) {
-                                object.set_position(Isometry2::new(Vector2::new(x, y), (a + 270.0).to_radians()));
+                                object.set_position(Isometry2::new(cube.position, (cube.rotation + 270.0).to_radians()));
+                            }
+                        }
+                        Vacant(_) => (),
+                    },
+                    IDInfo::PositionIDMissed => match self.cubes.entry(cube_address.to_string()) {
+                        Occupied(mut entry) => {
+                            let mut cube = entry.get_mut();
+                            cube.position = Vector2::new(0.0, 0.0);
+                            if let Some(object) = self.world.get_mut(cube.handle) {
+                                object.set_position(Isometry2::new(cube.position, 0.0));
                             }
                         }
                         Vacant(_) => (),
@@ -219,14 +240,26 @@ impl CubeManager {
             }
 
             Message::SetDirectionAll(angle) => {
-                for cube in self.cubes.values() {
+                for cube in self.cubes.values_mut() {
                     cube.set_direction(*angle);
+                }
+            }
+
+            Message::LookCenterAll => {
+                for cube in self.cubes.values_mut() {
+                    cube.look_center();
                 }
             }
 
             Message::StartGoAround => {
                 for cube in self.cubes.values_mut() {
                     cube.start_go_around();
+                }
+            }
+
+            Message::StopAll => {
+                for cube in self.cubes.values_mut() {
+                    cube.stop_go_around();
                 }
             }
 
