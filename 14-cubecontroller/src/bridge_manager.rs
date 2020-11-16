@@ -40,6 +40,7 @@ impl BridgeManager {
                                 SocketAddr::V4(addr) => addr.ip().to_string(),
                                 SocketAddr::V6(addr) => addr.ip().to_string(),
                             };
+                            info!("Bridge {} connected", address);
                             senders_to_bridge.lock().unwrap().insert(address, to_bridge);
                             thread::spawn(move || {
                                 Bridge::new(to_manager, from_manager, stream).start();

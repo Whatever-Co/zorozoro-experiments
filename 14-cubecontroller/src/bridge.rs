@@ -88,7 +88,12 @@ impl Bridge {
     fn process_message(&mut self, data: &[u8]) {
         let (address, command, payload) = {
             let topic_len = data[0] as usize;
-            let topic = std::str::from_utf8(&data[1..topic_len + 1]).unwrap();
+            let topic = std::str::from_utf8(&data[1..topic_len + 1]); //.unwrap();
+            if topic.is_err() {
+                error!("Corrupted message...? {:?}", data);
+                return;
+            }
+            let topic = topic.unwrap();
             let (address, command) = match topic.find('/') {
                 Some(_) => {
                     let v: Vec<&str> = topic.split('/').collect();

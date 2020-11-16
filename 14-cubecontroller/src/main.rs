@@ -9,6 +9,7 @@ use bridge::{IDInfo, Message};
 use bridge_manager::BridgeManager;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use cube::CubeManager;
+use env_logger::{Builder, Env};
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use piston::event_loop::{EventSettings, Events};
@@ -172,10 +173,9 @@ impl App {
             rectangle(WHITE, square, transform, gl);
 
             let a = CUBE_SIZE / 2.0;
-            let len = 0.030 * DOTS_PER_METER; // forward 30mm
             let color = if cube.hit { RED } else { GREEN };
             let start: [f64; 2] = [0.0, a + 1.0];
-            let end: [f64; 2] = [0.0, start[1] + len];
+            let end: [f64; 2] = [0.0, start[1] + cube::HIT_LEN];
             line_from_to(color, 1.0, start, end, transform, gl);
         }
 
@@ -184,7 +184,7 @@ impl App {
 }
 
 fn main() {
-    env_logger::init();
+    Builder::from_env(Env::default()).format_timestamp_millis().init();
     info!("Starting up!");
 
     let gl_version = OpenGL::V3_3;

@@ -10,8 +10,9 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::{Duration, Instant};
 
-const DOTS_PER_METER: f64 = 411.0 / 0.560;
-const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
+pub const DOTS_PER_METER: f64 = 411.0 / 0.560;
+pub const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
+pub const HIT_LEN: f64 = 0.020 * DOTS_PER_METER; // 20mm
 
 #[derive(Debug)]
 pub struct Cube {
@@ -83,15 +84,15 @@ impl Cube {
         let end_angle = start_angle + DISTANCE / c * std::f32::consts::TAU;
         let target_x = -end_angle.cos() * radius + mat_center.x;
         let target_y = -end_angle.sin() * radius + mat_center.y;
-        trace!(
-            "radius={:?}, C={}, start_angle={:?}, end_angle={:?}, x={:?}, y={:?}",
-            radius,
-            c,
-            start_angle,
-            end_angle,
-            target_x,
-            target_y,
-        );
+        // trace!(
+        //     "radius={:?}, C={}, start_angle={:?}, end_angle={:?}, x={:?}, y={:?}",
+        //     radius,
+        //     c,
+        //     start_angle,
+        //     end_angle,
+        //     target_x,
+        //     target_y,
+        // );
         self.to_bridge
             .try_send(Message::MoveToTarget(
                 self.address.clone(),
@@ -148,9 +149,11 @@ impl CubeManager {
             for cube in self.cubes.values_mut() {
                 if let Some(obj) = self.world.get_mut(cube.handle) {
                     let a = (CUBE_SIZE / 2.0) as f32;
-                    let len = (0.030 * DOTS_PER_METER) as f32; // forward 30mm
                     let ray = Ray::new(Point2::new(0.0, a + 1.0), Vector2::new(0.0, 1.0)).transform_by(obj.position());
-                    let hit = self.world.first_interference_with_ray(&ray, len, &self.collision_group).is_some();
+                    let hit = self
+                        .world
+                        .first_interference_with_ray(&ray, HIT_LEN as f32, &self.collision_group)
+                        .is_some();
                     if hit != cube.hit {
                         cube.hit = hit;
                         if hit {
