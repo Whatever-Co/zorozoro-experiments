@@ -135,6 +135,7 @@ pub struct CubeManager {
     to_ui: Sender<Message>,
     world: CollisionWorld<f32, ()>,
     collision_group: CollisionGroups,
+    going_around: bool,
 }
 
 impl CubeManager {
@@ -146,6 +147,7 @@ impl CubeManager {
             to_ui,
             world: CollisionWorld::new(0.01),
             collision_group: CollisionGroups::new(),
+            going_around: false,
         }
     }
 
@@ -240,24 +242,28 @@ impl CubeManager {
             }
 
             Message::SetDirectionAll(angle) => {
+                self.going_around = false;
                 for cube in self.cubes.values_mut() {
                     cube.set_direction(*angle);
                 }
             }
 
             Message::LookCenterAll => {
+                self.going_around = false;
                 for cube in self.cubes.values_mut() {
                     cube.look_center();
                 }
             }
 
             Message::StartGoAround => {
+                self.going_around = true;
                 for cube in self.cubes.values_mut() {
                     cube.start_go_around();
                 }
             }
 
             Message::StopAll => {
+                self.going_around = false;
                 for cube in self.cubes.values_mut() {
                     cube.stop_go_around();
                 }
@@ -292,7 +298,7 @@ impl CubeManager {
                     bridge: bridge_address,
                     to_bridge: self.to_bridge.clone(),
                     battery: 0,
-                    going_around: false,
+                    going_around: self.going_around,
                     last_move: Instant::now(),
                     handle,
                     hit: false,
