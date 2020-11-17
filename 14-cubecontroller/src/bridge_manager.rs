@@ -9,15 +9,17 @@ use std::thread;
 pub struct BridgeManager {
     to_cubes: Sender<Message>,
     from_cubes: Receiver<Message>,
+    to_ui: Sender<Message>,
     senders_to_bridge: Arc<Mutex<HashMap<String, Sender<Message>>>>,
     bridges: Vec<(String, usize)>,
 }
 
 impl BridgeManager {
-    pub fn new(to_cubes: Sender<Message>, from_cubes: Receiver<Message>) -> BridgeManager {
+    pub fn new(to_cubes: Sender<Message>, from_cubes: Receiver<Message>, to_ui: Sender<Message>) -> BridgeManager {
         BridgeManager {
             to_cubes,
             from_cubes,
+            to_ui,
             senders_to_bridge: Arc::new(Mutex::new(HashMap::new())),
             bridges: Vec::with_capacity(32),
         }
@@ -71,8 +73,15 @@ impl BridgeManager {
             }
 
             Message::Available(address, slots) => {
-                self.bridges.push((address.clone(), *slots));
-                self.bridges.sort_by(|a, b| a.1.cmp(&b.1));
+                if *slots > 0 {
+                    match self.bridges.iter().position(|(addr, _)| addr == address) {
+                        Some(index) => self.bridges[index].1 = *slots,
+                        None => self.bridges.push((address.clone(), *slots)),
+                    }
+                    self.bridges.sort_by(|a, b| a.1.cmp(&b.1));
+                    // debug!("{:?}", self.bridges);
+                }
+                self.to_ui.try_send(message.clone()).unwrap();
             }
 
             m @ Message::Connected(_, _) | m @ Message::Disconnected(_, _) | m @ Message::IDInfo(_, _) | m @ Message::BatteryInfo(_, _) => {

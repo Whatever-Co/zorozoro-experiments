@@ -19,17 +19,31 @@ use piston::window::WindowSettings;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::HashMap;
 use std::thread;
+use std::time::{Duration, Instant};
 
 const DOTS_PER_METER: f64 = 411.0 / 0.560;
 const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
 
+const TOIO_BLUE: [f32; 4] = [0.000, 0.684, 0.792, 1.0];
+const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+
 const COLORS: [[u8; 3]; 3] = [[255, 255, 0], [255, 0, 255], [0, 255, 255]];
 
+#[derive(Debug, Clone)]
 struct Cube {
     x: f64,
     y: f64,
     a: f64,
     hit: bool,
+    last_message_time: Instant,
+}
+
+#[derive(Debug, Clone)]
+struct Bridge {
+    cubes: HashMap<String, Cube>,
+    last_message_time: Instant,
 }
 
 struct App<'a> {
@@ -37,6 +51,7 @@ struct App<'a> {
     sender: Option<Sender<Message>>,
     receiver: Option<Receiver<Message>>,
     key_state: HashMap<Key, ButtonState>,
+    bridges: HashMap<String, Bridge>,
     cubes: HashMap<String, Cube>,
     count: usize,
     glyph_cache: GlyphCache<'a>,
@@ -50,6 +65,7 @@ impl App<'_> {
             receiver: None,
             key_state: HashMap::with_capacity(256),
             cubes: HashMap::with_capacity(256),
+            bridges: HashMap::with_capacity(32),
             count: 0,
             glyph_cache: GlyphCache::new("assets/RobotoCondensed-Regular.ttf", (), TextureSettings::new()).unwrap(),
         }
@@ -60,6 +76,7 @@ impl App<'_> {
         let (to_bridges_sender, to_bridges_receiver) = unbounded(); // -> Bridge
         let (to_ui_sender, to_ui_receiver) = unbounded(); // -> UI
         {
+            let to_ui_sender = to_ui_sender.clone();
             thread::spawn(move || {
                 CubeManager::new(to_bridges_sender, to_cubes_receiver, to_ui_sender).start();
             });
@@ -67,7 +84,7 @@ impl App<'_> {
         {
             let to_cubes_sender = to_cubes_sender.clone();
             thread::spawn(move || {
-                BridgeManager::new(to_cubes_sender, to_bridges_receiver).start();
+                BridgeManager::new(to_cubes_sender, to_bridges_receiver, to_ui_sender).start();
             });
         }
         self.sender = Some(to_cubes_sender);
@@ -126,17 +143,34 @@ impl App<'_> {
     fn update(&mut self, _args: &UpdateArgs) {
         for message in self.receiver.as_mut().unwrap().try_iter() {
             match message {
-                Message::Connected(_, cube_address) => {
-                    self.cubes.entry(cube_address).or_insert_with(|| Cube {
+                Message::Available(address, _) => {
+                    self.bridges
+                        .entry(address)
+                        .and_modify(|bridge| bridge.last_message_time = Instant::now())
+                        .or_insert_with(|| Bridge {
+                            cubes: HashMap::with_capacity(10),
+                            last_message_time: Instant::now(),
+                        });
+                }
+
+                Message::Connected(bridge_address, cube_address) => {
+                    let cube = self.cubes.entry(cube_address.clone()).or_insert_with(|| Cube {
                         x: -999.9,
                         y: -999.9,
                         a: 0.0,
                         hit: false,
+                        last_message_time: Instant::now(),
+                    });
+                    self.bridges.entry(bridge_address).and_modify(|bridge| {
+                        bridge.cubes.entry(cube_address).or_insert(cube.clone());
                     });
                 }
 
-                Message::Disconnected(_, cube_address) => {
+                Message::Disconnected(bridge_address, cube_address) => {
                     self.cubes.remove(&cube_address);
+                    self.bridges.entry(bridge_address).and_modify(|bridge| {
+                        bridge.cubes.remove(&cube_address);
+                    });
                 }
 
                 Message::IDInfo(cube_address, id_info) => match id_info {
@@ -170,16 +204,21 @@ impl App<'_> {
     fn render(&mut self, args: &RenderArgs) {
         use graphics::*;
 
-        const TOIO_BLUE: [f32; 4] = [0.000, 0.684, 0.792, 1.0];
-        const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-        const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-        const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-
         let context = self.gl.draw_begin(args.viewport());
-        let gl = &mut self.gl;
 
+        let gl = &mut self.gl;
         clear(TOIO_BLUE, gl);
 
+        self.draw_cubes(&context);
+        self.draw_ui(&context, args.window_size);
+
+        self.gl.draw_end();
+    }
+
+    fn draw_cubes(&mut self, context: &graphics::Context) {
+        use graphics::*;
+        let gl = &mut self.gl;
+        let gl = &mut self.gl;
         let square = rectangle::centered_square(0.0, 0.0, CUBE_SIZE / 2.0);
         for cube in self.cubes.values() {
             let transform = context.transform.trans(cube.x, cube.y).rot_deg(cube.a - 90.0);
@@ -191,21 +230,42 @@ impl App<'_> {
             let end: [f64; 2] = [0.0, start[1] + cube::HIT_LEN];
             line_from_to(color, 1.0, start, end, transform, gl);
         }
+    }
 
+    fn draw_ui(&mut self, context: &graphics::Context, window_size: [f64; 2]) {
+        use graphics::*;
         self.draw_text(&context, 10.0, 40.0, 30, &WHITE, "ZOROZORO Controller");
         // self.draw_text(&context, 10.0, 70.0, 18, &WHITE, &format!("Bridges: {}", self.cubes.len()));
-        self.draw_text(&context, 10.0, 70.0, 18, &WHITE, &format!("Cubes: {}", self.cubes.len()));
+        self.draw_text(&context, 10.0, 70.0, 18, &WHITE, &format!("Connected Cubes: {}", self.cubes.len()));
+        {
+            let filled = rectangle::square(0.0, 0.0, 10.0);
+            let stroke = rectangle::square(0.0, 0.0, 9.0);
+            let mut y = 100.0;
+            for (address, bridge) in self.bridges.clone().iter() {
+                self.draw_text(&context, 10.0, y + 12.0, 12, &WHITE, &address);
+                y += 2.0;
+                let mut x = 90.0;
+                let gl = &mut self.gl;
+                for _ in bridge.cubes.values() {
+                    rectangle(WHITE, filled, context.transform.trans(x, y), gl);
+                    x += 15.0;
+                }
+                for _ in bridge.cubes.len()..10 {
+                    Rectangle::new_border(WHITE, 0.5).draw(stroke, &Default::default(), context.transform.trans(x + 0.5, y + 0.5), gl);
+                    x += 15.0;
+                }
+                y += 18.0;
+            }
+        }
         {
             const MENU_TEXT: &str = "1. Battery Status\n2. Random Color\n3. Random Rotate\n4. Look Center\n5. Go Around\n6. Stop\n0. Shutdown";
             let lines = MENU_TEXT.split("\n").collect::<Vec<_>>();
-            let mut y = args.viewport().window_size[1] - 25.0 * (lines.len() as f64) - 10.0;
+            let mut y = window_size[1] - 25.0 * (lines.len() as f64) - 10.0;
             for line in lines.iter() {
                 y += 25.0;
                 self.draw_text(&context, 10.0, y, 18, &WHITE, line);
             }
         }
-
-        self.gl.draw_end();
     }
 
     fn draw_text(&mut self, context: &graphics::Context, x: f64, y: f64, size: u32, color: &[f32; 4], s: &str) {
@@ -223,7 +283,7 @@ fn main() {
     info!("Starting up!");
 
     let gl_version = OpenGL::V3_3;
-    let mut window: Window = WindowSettings::new("Cube Controller", [800, 600])
+    let mut window: Window = WindowSettings::new("Cube Controller", [1000, 1000])
         .graphics_api(gl_version)
         .samples(4)
         .vsync(true)
