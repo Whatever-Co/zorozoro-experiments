@@ -10,10 +10,11 @@ use bridge_manager::BridgeManager;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use cube::CubeManager;
 use env_logger::{Builder, Env};
+use glutin::dpi::PhysicalSize;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
 use piston::event_loop::{EventSettings, Events};
-use piston::input::{Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
+use piston::input::{Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, ResizeEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::HashMap;
@@ -241,6 +242,9 @@ fn main() {
         }
         if let Some(args) = e.update_args() {
             app.update(&args);
+        }
+        if let Some(args) = e.resize_args() {
+            window.ctx.resize(PhysicalSize::new(args.draw_size[0].into(), args.draw_size[1].into()));
         }
         if let Some(args) = e.render_args() {
             app.render(&args);
