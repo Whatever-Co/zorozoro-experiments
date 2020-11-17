@@ -228,14 +228,14 @@ void App::OnDisconnect(uint16_t conn_handle, uint8_t reason) {
 }
 
 void App::StartAcceptNewCube() {
-    if (CubeManager::GetNumCubes() == MAX_CUBES) {
-        // Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
-        return;
-    }
+    // if (CubeManager::GetNumCubes() == MAX_CUBES) {
+    //     // Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
+    //     return;
+    // }
     auto topic = ip_address_ + "/available";
     char available = MAX_CUBES - CubeManager::GetNumCubes();
     mqtt.publish(topic.c_str(), &available, 1);
-    accept_new_cube_ = true;
+    accept_new_cube_ = CubeManager::GetNumCubes() < MAX_CUBES;
     Serial.println("Start accept new cube");
 }
 
