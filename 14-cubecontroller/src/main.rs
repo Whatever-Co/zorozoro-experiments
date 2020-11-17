@@ -38,6 +38,7 @@ struct Cube {
     a: f64,
     hit: bool,
     last_message_time: Instant,
+    bridge: String,
 }
 
 #[derive(Debug, Clone)]
@@ -160,6 +161,7 @@ impl App<'_> {
                         a: 0.0,
                         hit: false,
                         last_message_time: Instant::now(),
+                        bridge: bridge_address.clone(),
                     });
                     self.bridges.entry(bridge_address).and_modify(|bridge| {
                         bridge.cubes.entry(cube_address).or_insert(cube.clone());
@@ -174,13 +176,20 @@ impl App<'_> {
                 }
 
                 Message::IDInfo(cube_address, id_info) => match id_info {
-                    IDInfo::PositionID(x, y, a) => {
-                        self.cubes.entry(cube_address).and_modify(|cube| {
+                    IDInfo::PositionID(x, y, a) => match self.cubes.entry(cube_address.clone()) {
+                        Occupied(mut entry) => {
+                            let mut cube = entry.get_mut();
                             cube.x = From::from(x);
                             cube.y = From::from(y);
                             cube.a = From::from(a);
-                        });
-                    }
+                            self.bridges.entry(cube.bridge.clone()).and_modify(|bridge| {
+                                bridge.cubes.entry(cube_address).and_modify(|cube| {
+                                    cube.last_message_time = Instant::now();
+                                });
+                            });
+                        }
+                        Vacant(_) => (),
+                    },
                     IDInfo::PositionIDMissed => {
                         self.cubes.entry(cube_address).and_modify(|cube| {
                             cube.x = -999.9;
@@ -202,12 +211,9 @@ impl App<'_> {
     }
 
     fn render(&mut self, args: &RenderArgs) {
-        use graphics::*;
-
         let context = self.gl.draw_begin(args.viewport());
 
-        let gl = &mut self.gl;
-        clear(TOIO_BLUE, gl);
+        graphics::clear(TOIO_BLUE, &mut self.gl);
 
         self.draw_cubes(&context);
         self.draw_ui(&context, args.window_size);
@@ -217,7 +223,6 @@ impl App<'_> {
 
     fn draw_cubes(&mut self, context: &graphics::Context) {
         use graphics::*;
-        let gl = &mut self.gl;
         let gl = &mut self.gl;
         let square = rectangle::centered_square(0.0, 0.0, CUBE_SIZE / 2.0);
         for cube in self.cubes.values() {
@@ -241,17 +246,22 @@ impl App<'_> {
             let filled = rectangle::square(0.0, 0.0, 10.0);
             let stroke = rectangle::square(0.0, 0.0, 9.0);
             let mut y = 100.0;
+            let now = Instant::now();
             for (address, bridge) in self.bridges.clone().iter() {
-                self.draw_text(&context, 10.0, y + 12.0, 12, &WHITE, &address);
+                let dt = now - bridge.last_message_time;
+                let color = [1.0, 1.0, 1.0, (1.0 - dt.as_secs_f32()).max(0.4).min(1.0)];
+                self.draw_text(&context, 10.0, y + 12.0, 12, &color, &address);
                 y += 2.0;
                 let mut x = 90.0;
                 let gl = &mut self.gl;
-                for _ in bridge.cubes.values() {
-                    rectangle(WHITE, filled, context.transform.trans(x, y), gl);
+                for cube in bridge.cubes.values() {
+                    let dt = now - cube.last_message_time;
+                    let color = [1.0, 1.0, 1.0, (1.0 - dt.as_secs_f32() * 2.0).max(0.25).min(1.0)];
+                    rectangle(color, filled, context.transform.trans(x, y), gl);
                     x += 15.0;
                 }
                 for _ in bridge.cubes.len()..10 {
-                    Rectangle::new_border(WHITE, 0.5).draw(stroke, &Default::default(), context.transform.trans(x + 0.5, y + 0.5), gl);
+                    Rectangle::new_border([1.0, 1.0, 1.0, 0.3], 0.5).draw(stroke, &Default::default(), context.transform.trans(x + 0.5, y + 0.5), gl);
                     x += 15.0;
                 }
                 y += 18.0;
