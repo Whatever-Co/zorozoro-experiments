@@ -19,7 +19,7 @@ use piston::window::WindowSettings;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::HashMap;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 const DOTS_PER_METER: f64 = 411.0 / 0.560;
 const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
@@ -249,7 +249,7 @@ impl App<'_> {
             let now = Instant::now();
             for (address, bridge) in self.bridges.clone().iter() {
                 let dt = now - bridge.last_message_time;
-                let color = [1.0, 1.0, 1.0, (1.0 - dt.as_secs_f32()).max(0.4).min(1.0)];
+                let color = [1.0, 1.0, 1.0, (1.0 - dt.as_secs_f32() / 3.0).max(0.4).min(1.0)];
                 self.draw_text(&context, 10.0, y + 12.0, 12, &color, &address);
                 y += 2.0;
                 let mut x = 90.0;
