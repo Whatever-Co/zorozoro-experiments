@@ -69,8 +69,8 @@ impl Bridge {
         let mut data = [0 as u8; 1024];
         self.stream.set_nonblocking(true).unwrap();
         while match self.stream.read(&mut data) {
-            Ok(_size) => {
-                self.process_message(&data);
+            Ok(size) => {
+                self.process_message(&data[0..size]);
                 true
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
@@ -89,31 +89,27 @@ impl Bridge {
         } {}
     }
 
-    fn process_message(&mut self, data: &[u8]) {
+    fn process_message(&mut self, data: &[u8]) -> Result<(), ()> {
         let (address, command, payload) = {
-            let topic_len = data[0] as usize;
-            let topic = std::str::from_utf8(&data[1..topic_len + 1]); //.unwrap();
-            if topic.is_err() {
-                error!("Corrupted message...? {:?}", data);
-                return;
-            }
-            let topic = topic.unwrap();
+            let mut reader = BufferReader::new(data);
+            let topic = reader.read_string()?;
             let (address, command) = match topic.find('/') {
                 Some(_) => {
                     let v: Vec<&str> = topic.split('/').collect();
-                    (v[0], v[1])
+                    (v[0].to_string(), v[1].to_string())
                 }
-                _ => ("", topic),
+                _ => ("".to_string(), topic),
             };
-            let payload_len = data[1 + topic_len] as usize;
-            let p = 1 + topic_len + 1;
-            (address.to_string(), command, &data[p..p + payload_len])
+            let payload_len = reader.read_u8()? as usize;
+            let payload = reader.read_array(payload_len)?;
+            trace!("buffer left = {}", data.len() - reader.p);
+            (address, command, payload)
         };
         trace!("address={:?}, command={:?}, payload={:?}", address, command, payload);
-        let message = match command {
+        let message = match command.as_str() {
             "newcube" => {
                 self.mode = BridgeMode::Scanner;
-                let address = std::str::from_utf8(payload).unwrap().to_string();
+                let address = String::from_utf8(payload).unwrap();
                 info!("Found Cube {}", address);
                 Message::NewCubeFound(address)
             }
@@ -165,6 +161,7 @@ impl Bridge {
         };
         // trace!("message={:?}", message);
         self.to_manager.send(message).unwrap();
+        Ok(())
     }
 
     fn send_message(&mut self, message: Message) {
@@ -236,5 +233,45 @@ impl Bridge {
 
             _ => (),
         }
+    }
+}
+
+struct BufferReader {
+    data: Vec<u8>,
+    p: usize,
+}
+
+impl BufferReader {
+    fn new(data: &[u8]) -> BufferReader {
+        BufferReader {
+            data: data.to_vec(),
+            p: 0usize,
+        }
+    }
+
+    fn available(&self, size: usize) -> Result<&Self, ()> {
+        if self.p + size <= self.data.len() {
+            Ok(self)
+        } else {
+            Err(())
+        }
+    }
+
+    fn read_u8(&mut self) -> Result<u8, ()> {
+        let value = self.available(1)?.data[self.p];
+        self.p += 1;
+        Ok(value)
+    }
+
+    fn read_array(&mut self, size: usize) -> Result<Vec<u8>, ()> {
+        let array = self.available(size)?.data[self.p..(self.p + size)].to_vec();
+        self.p += size;
+        Ok(array)
+    }
+
+    fn read_string(&mut self) -> Result<String, ()> {
+        let len = self.read_u8()? as usize;
+        let data = self.read_array(len)?;
+        String::from_utf8(data).map_err(|_| ())
     }
 }
