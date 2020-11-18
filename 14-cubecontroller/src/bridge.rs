@@ -66,12 +66,12 @@ impl Bridge {
     }
 
     pub fn start(&mut self) {
-        let mut data = [0 as u8; 1024];
+        let mut data = [0 as u8; 4096];
         self.stream.set_nonblocking(true).unwrap();
         while match self.stream.read(&mut data) {
             Ok(size) => {
-                if let Err(e) = self.process_message(&data[0..size]) {
-                    error!("An error has occurred while processing received data");
+                if let Err(err) = self.process_message(&data[0..size]) {
+                    error!("An error has occurred while processing received data: {}", err);
                 };
                 true
             }
@@ -91,7 +91,7 @@ impl Bridge {
         } {}
     }
 
-    fn process_message(&mut self, data: &[u8]) -> Result<(), ()> {
+    fn process_message(&mut self, data: &[u8]) -> Result<(), String> {
         let mut reader = BufferReader::new(data);
         while reader.left() > 0 {
             let (address, command, payload) = {
@@ -257,29 +257,29 @@ impl BufferReader {
         self.data.len() - self.p
     }
 
-    fn available(&self, size: usize) -> Result<&Self, ()> {
+    fn available(&self, size: usize) -> Result<&Self, String> {
         if self.p + size <= self.data.len() {
             Ok(self)
         } else {
-            Err(())
+            Err(format!("No more data available. left={}, requested={}", self.left(), size))
         }
     }
 
-    fn read_u8(&mut self) -> Result<u8, ()> {
+    fn read_u8(&mut self) -> Result<u8, String> {
         let value = self.available(1)?.data[self.p];
         self.p += 1;
         Ok(value)
     }
 
-    fn read_array(&mut self, size: usize) -> Result<Vec<u8>, ()> {
+    fn read_array(&mut self, size: usize) -> Result<Vec<u8>, String> {
         let array = self.available(size)?.data[self.p..(self.p + size)].to_vec();
         self.p += size;
         Ok(array)
     }
 
-    fn read_string(&mut self) -> Result<String, ()> {
+    fn read_string(&mut self) -> Result<String, String> {
         let len = self.read_u8()? as usize;
         let data = self.read_array(len)?;
-        String::from_utf8(data).map_err(|_| ())
+        String::from_utf8(data).map_err(|_| "std::string::FromUtf8Erro".to_string())
     }
 }
