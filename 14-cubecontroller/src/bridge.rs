@@ -70,7 +70,9 @@ impl Bridge {
         self.stream.set_nonblocking(true).unwrap();
         while match self.stream.read(&mut data) {
             Ok(size) => {
-                self.process_message(&data[0..size]);
+                if let Err(e) = self.process_message(&data[0..size]) {
+                    error!("An error has occurred while processing received data");
+                };
                 true
             }
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
@@ -90,77 +92,79 @@ impl Bridge {
     }
 
     fn process_message(&mut self, data: &[u8]) -> Result<(), ()> {
-        let (address, command, payload) = {
-            let mut reader = BufferReader::new(data);
-            let topic = reader.read_string()?;
-            let (address, command) = match topic.find('/') {
-                Some(_) => {
-                    let v: Vec<&str> = topic.split('/').collect();
-                    (v[0].to_string(), v[1].to_string())
-                }
-                _ => ("".to_string(), topic),
+        let mut reader = BufferReader::new(data);
+        while reader.left() > 0 {
+            let (address, command, payload) = {
+                let topic = reader.read_string()?;
+                let (address, command) = match topic.find('/') {
+                    Some(_) => {
+                        let v: Vec<&str> = topic.split('/').collect();
+                        (v[0].to_string(), v[1].to_string())
+                    }
+                    _ => ("".to_string(), topic),
+                };
+                let payload_len = reader.read_u8()? as usize;
+                let payload = reader.read_array(payload_len)?;
+                trace!("buffer left = {}", data.len() - reader.p);
+                (address, command, payload)
             };
-            let payload_len = reader.read_u8()? as usize;
-            let payload = reader.read_array(payload_len)?;
-            trace!("buffer left = {}", data.len() - reader.p);
-            (address, command, payload)
-        };
-        trace!("address={:?}, command={:?}, payload={:?}", address, command, payload);
-        let message = match command.as_str() {
-            "newcube" => {
-                self.mode = BridgeMode::Scanner;
-                let address = String::from_utf8(payload).unwrap();
-                info!("Found Cube {}", address);
-                Message::NewCubeFound(address)
-            }
-
-            "available" => {
-                if self.mode == BridgeMode::Unknown {
-                    info!("{} is bridge!", self.address);
+            trace!("address={:?}, command={:?}, payload={:?}", address, command, payload);
+            let message = match command.as_str() {
+                "newcube" => {
+                    self.mode = BridgeMode::Scanner;
+                    let address = String::from_utf8(payload).unwrap();
+                    info!("Found Cube {}", address);
+                    Message::NewCubeFound(address)
                 }
-                self.mode = BridgeMode::Bridge;
-                let slots = payload[0] as usize;
-                info!("Available slots of {} is {}", self.address, slots);
-                Message::Available(self.address.clone(), slots)
-            }
 
-            "connected" => {
-                info!("Cube {} connected", address);
-                Message::Connected(self.address.clone(), address)
-            }
-
-            "disconnected" => {
-                info!("Cube {} disconnected", address);
-                Message::Disconnected(self.address.clone(), address)
-            }
-
-            "position" => match payload[0] {
-                1 => {
-                    let mut p = &payload[1..];
-                    let x = p.read_u16::<LittleEndian>().unwrap();
-                    let y = p.read_u16::<LittleEndian>().unwrap();
-                    let a = p.read_u16::<LittleEndian>().unwrap();
-                    let id = IDInfo::PositionID(x, y, a);
-                    Message::IDInfo(address, id)
+                "available" => {
+                    if self.mode == BridgeMode::Unknown {
+                        info!("{} is bridge!", self.address);
+                    }
+                    self.mode = BridgeMode::Bridge;
+                    let slots = payload[0] as usize;
+                    info!("Available slots of {} is {}", self.address, slots);
+                    Message::Available(self.address.clone(), slots)
                 }
-                2 => {
-                    let mut p = &payload[1..];
-                    let value = p.read_u32::<LittleEndian>().unwrap();
-                    let a = p.read_u16::<LittleEndian>().unwrap();
-                    let id = IDInfo::StandardID(value, a);
-                    Message::IDInfo(address, id)
+
+                "connected" => {
+                    info!("Cube {} connected", address);
+                    Message::Connected(self.address.clone(), address)
                 }
-                3 => Message::IDInfo(address, IDInfo::PositionIDMissed),
-                4 => Message::IDInfo(address, IDInfo::StandardIDMissed),
-                _ => Message::Unknown,
-            },
 
-            "battery" => Message::BatteryInfo(address, payload[0]),
+                "disconnected" => {
+                    info!("Cube {} disconnected", address);
+                    Message::Disconnected(self.address.clone(), address)
+                }
 
-            &_ => Message::Unknown,
-        };
-        // trace!("message={:?}", message);
-        self.to_manager.send(message).unwrap();
+                "position" => match payload[0] {
+                    1 => {
+                        let mut p = &payload[1..];
+                        let x = p.read_u16::<LittleEndian>().unwrap();
+                        let y = p.read_u16::<LittleEndian>().unwrap();
+                        let a = p.read_u16::<LittleEndian>().unwrap();
+                        let id = IDInfo::PositionID(x, y, a);
+                        Message::IDInfo(address, id)
+                    }
+                    2 => {
+                        let mut p = &payload[1..];
+                        let value = p.read_u32::<LittleEndian>().unwrap();
+                        let a = p.read_u16::<LittleEndian>().unwrap();
+                        let id = IDInfo::StandardID(value, a);
+                        Message::IDInfo(address, id)
+                    }
+                    3 => Message::IDInfo(address, IDInfo::PositionIDMissed),
+                    4 => Message::IDInfo(address, IDInfo::StandardIDMissed),
+                    _ => Message::Unknown,
+                },
+
+                "battery" => Message::BatteryInfo(address, payload[0]),
+
+                &_ => Message::Unknown,
+            };
+            // trace!("message={:?}", message);
+            self.to_manager.send(message).unwrap();
+        }
         Ok(())
     }
 
@@ -247,6 +251,10 @@ impl BufferReader {
             data: data.to_vec(),
             p: 0usize,
         }
+    }
+
+    fn left(&self) -> usize {
+        self.data.len() - self.p
     }
 
     fn available(&self, size: usize) -> Result<&Self, ()> {
