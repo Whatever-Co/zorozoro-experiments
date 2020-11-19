@@ -34,8 +34,18 @@ static Chrono myChrono;
 
 String App::ip_address_;
 bool App::accept_new_cube_ = false;
+bool App::connecting_ = false;
 
 //----------------------------------------
+
+void blinkTask(void *pvParameters) {
+    while (1) {
+        digitalWrite(LED_RED, HIGH);
+        vTaskDelay(50);
+        digitalWrite(LED_RED, LOW);
+        vTaskDelay(950);
+    }
+}
 
 void App::Setup() {
     // SEGGER_RTT_Init();
@@ -55,6 +65,7 @@ void App::Setup() {
     // Bluefruit.configUuid128Count(32);
     // Bluefruit.configAttrTableSize(0x3000);
     Bluefruit.begin(0, MAX_CUBES);
+    Bluefruit.setTxPower(8);
     Bluefruit.Central.setConnectCallback(OnConnect);
     Bluefruit.Central.setDisconnectCallback(OnDisconnect);
 
@@ -84,6 +95,8 @@ void App::Setup() {
 
     Serial.println("ready...");
 
+    xTaskCreate(blinkTask, "blinkTask", 1024, NULL, 1, NULL);
+
     UpdateStatusLED();
 }
 
@@ -98,14 +111,13 @@ void App::Loop() {
             ethernet.stop();
             if (mqtt.connect()) {
                 Serial.println("connected");
-                for (const auto & address : CubeManager::GetAddresses()){
+                for (const auto &address : CubeManager::GetAddresses()) {
                     char topic[32];
                     sprintf(topic, "%s/connected", address.c_str());
                     mqtt.publish(topic, nullptr, 0);
                     Serial.printf("Published: %s\n", topic);
                 }
                 StartAcceptNewCube();
-                myChrono.restart();
             } else {
                 Serial.println("failed, try again in 3 seconds");
                 delay(3000);
@@ -114,8 +126,7 @@ void App::Loop() {
         ledOff(LED_RED);
     }
 
-    if (myChrono.hasPassed(3000)) {
-        myChrono.restart();
+    if (!connecting_ && myChrono.hasPassed(3000)) {
         StartAcceptNewCube();
     }
 
@@ -206,6 +217,8 @@ void App::OnConnect(uint16_t conn_handle) {
         Serial.printf("Published: %s\n", topic);
     }
 
+    connecting_ = false;
+
     StartAcceptNewCube();
     UpdateStatusLED();
 }
@@ -236,6 +249,7 @@ void App::StartAcceptNewCube() {
     char available = MAX_CUBES - CubeManager::GetNumCubes();
     mqtt.publish(topic.c_str(), &available, 1);
     accept_new_cube_ = CubeManager::GetNumCubes() < MAX_CUBES;
+    myChrono.restart();
     Serial.println("Start accept new cube");
 }
 
@@ -252,6 +266,7 @@ bool App::ConnectToCube(String address) {
     }
     auto addr = Address::FromString(address);
     Bluefruit.Central.connect(&addr);
+    connecting_ = true;
     return true;
 }
 

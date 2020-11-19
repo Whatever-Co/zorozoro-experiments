@@ -27,4 +27,5 @@ class App {
 
     static String ip_address_;
     static bool accept_new_cube_;
+    static bool connecting_;
 };
