@@ -25,6 +25,7 @@ class App {
 
     static void UpdateStatusLED();
 
+    static String mac_address_;
     static String ip_address_;
     static bool accept_new_cube_;
     static bool connecting_;

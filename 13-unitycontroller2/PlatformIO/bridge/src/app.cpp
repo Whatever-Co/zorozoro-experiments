@@ -32,6 +32,7 @@ static Chrono myChrono;
 
 //----------------------------------------
 
+String App::mac_address_;
 String App::ip_address_;
 bool App::accept_new_cube_ = false;
 bool App::connecting_ = false;
@@ -40,10 +41,13 @@ bool App::connecting_ = false;
 
 void blinkTask(void *pvParameters) {
     while (1) {
-        digitalWrite(LED_RED, HIGH);
-        vTaskDelay(50);
-        digitalWrite(LED_RED, LOW);
-        vTaskDelay(950);
+        while (mqtt.connected()) {
+            digitalWrite(LED_RED, HIGH);
+            vTaskDelay(50);
+            digitalWrite(LED_RED, LOW);
+            vTaskDelay(950);
+        }
+        vTaskDelay(3000);
     }
 }
 
@@ -72,7 +76,12 @@ void App::Setup() {
     // Use bluetooth address as Ethernet MAC address...
     auto bladdr = Bluefruit.getAddr();
     auto mac = &(bladdr.addr[0]);
-    Serial.printf("Bluetooth address: %02X:%02X:%02X:%02X:%02X:%02X\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    {
+        char addr_str[32];
+        sprintf(addr_str, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        mac_address_ = String(addr_str);
+        Serial.printf("Bluetooth address: %s\n", mac_address_.c_str());
+    }
 
     Serial.println("Initialize Ethernet with DHCP:");
     if (Ethernet.begin(mac) == 0) {
@@ -84,11 +93,13 @@ void App::Setup() {
     }
     Serial.print("  DHCP assigned IP ");
     // Serial.println(Ethernet.localIP());
-    auto addr = Ethernet.localIP();
-    char addr_str[32];
-    sprintf(addr_str, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
-    ip_address_ = String(addr_str);
-    Serial.println(ip_address_);
+    {
+        auto addr = Ethernet.localIP();
+        char addr_str[32];
+        sprintf(addr_str, "%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3]);
+        ip_address_ = String(addr_str);
+        Serial.println(ip_address_);
+    }
 
     mqtt.begin(CONTROLLER_HOST, ethernet);
     mqtt.setCallback(OnMessage);
@@ -245,7 +256,7 @@ void App::StartAcceptNewCube() {
     //     // Serial.printf("Cannot start accept new cube... (max: %d)\n", MAX_CUBES);
     //     return;
     // }
-    auto topic = ip_address_ + "/available";
+    auto topic = mac_address_ + "/available";
     char available = MAX_CUBES - CubeManager::GetNumCubes();
     mqtt.publish(topic.c_str(), &available, 1);
     accept_new_cube_ = CubeManager::GetNumCubes() < MAX_CUBES;
