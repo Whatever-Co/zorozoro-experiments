@@ -78,6 +78,10 @@ class MQTTClient {
                 p++;
                 memcpy(topic, p, len);
                 topic[len] = 0;
+                if (strlen((const char *)topic) != len) {
+                    Serial.printf("Broken topic received??? %s\n", topic);
+                    break;
+                }
                 p += len;
                 Serial.printf("%d, %s\n", len, topic);
                 len = *p;
