@@ -34,7 +34,8 @@ pub struct Cube {
     to_bridge: Sender<Message>,
     battery: u8,
     going_around: bool,
-    last_move: Instant,
+    // last_message_time: Instant,
+    last_move_time: Instant,
     handle: CollisionObjectSlabHandle,
     hit: bool,
 }
@@ -84,7 +85,7 @@ impl Cube {
 
     pub fn start_go_around(&mut self) {
         self.going_around = true;
-        self.last_move = Instant::now();
+        self.last_move_time = Instant::now();
     }
 
     pub fn stop_go_around(&mut self) {
@@ -125,9 +126,9 @@ impl Cube {
     pub fn tick(&mut self) {
         if self.going_around && !self.hit {
             let now = Instant::now();
-            if (now - self.last_move).as_millis() >= 500 {
+            if (now - self.last_move_time).as_millis() >= 500 {
                 self.send_next_move();
-                self.last_move = now;
+                self.last_move_time = now;
             }
         }
     }
@@ -158,6 +159,8 @@ impl CubeManager {
 
     pub fn start(&mut self) {
         loop {
+            let start = Instant::now();
+
             while let Ok(message) = self.from_bridge.try_recv() {
                 self.process_message(&message);
             }
@@ -167,25 +170,43 @@ impl CubeManager {
             }
             self.world.update();
 
-            for cube in self.cubes.values_mut() {
-                if let Some(obj) = self.world.get_mut(cube.handle) {
-                    let a = (CUBE_SIZE / 2.0) as f32;
-                    let ray = Ray::new(Point2::new(0.0, a + 1.0), Vector2::new(0.0, 1.0)).transform_by(obj.position());
-                    let hit = self
-                        .world
-                        .first_interference_with_ray(&ray, HIT_LEN as f32, &self.collision_group)
-                        .is_some();
-                    if hit != cube.hit {
-                        cube.hit = hit;
-                        if hit {
-                            cube.stop_motor();
+            if self.going_around {
+                let now = Instant::now();
+                for cube in self.cubes.values_mut() {
+                    // if (now - cube.last_message_time).as_millis() >= 1000 {
+                    //     if let Some(object) = self.world.get_mut(cube.handle) {
+                    //         object.set_position(Isometry2::new(Vector2::new(0.0, 0.0), 0.0));
+                    //     }
+                    // }
+                    if let Some(obj) = self.world.get_mut(cube.handle) {
+                        let a = (CUBE_SIZE / 2.0) as f32;
+                        let ray = Ray::new(Point2::new(0.0, a + 1.0), Vector2::new(0.0, 1.0)).transform_by(obj.position());
+                        let hit = self
+                            .world
+                            .first_interference_with_ray(&ray, HIT_LEN as f32, &self.collision_group)
+                            .is_some();
+                        if hit != cube.hit {
+                            cube.hit = hit;
+                            if hit {
+                                cube.stop_motor();
+                            }
+                            self.to_ui.try_send(Message::HitStateChanged(cube.address.clone(), hit)).unwrap();
                         }
-                        self.to_ui.try_send(Message::HitStateChanged(cube.address.clone(), hit)).unwrap();
                     }
+                }
+            } else {
+                for cube in self.cubes.values_mut() {
+                    cube.hit = false;
                 }
             }
 
-            thread::sleep(Duration::from_millis(50));
+            const FPS: f64 = 100.0;
+            const FRAME_TIME: f64 = 1.0 / FPS;
+            let dt = (Instant::now() - start).as_secs_f64();
+            if dt < FRAME_TIME {
+                // trace!("FPS={}, FRAME_TIME={}, dt={}, sleep={}", FPS, FRAME_TIME, dt, FRAME_TIME - dt);
+                thread::sleep(Duration::from_secs_f64(FRAME_TIME - dt));
+            }
         }
     }
 
@@ -214,6 +235,7 @@ impl CubeManager {
                             let mut cube = entry.get_mut();
                             cube.position = Vector2::new(*x as f32, *y as f32);
                             cube.rotation = *a as f32;
+                            // cube.last_message_time = Instant::now();
                             if let Some(object) = self.world.get_mut(cube.handle) {
                                 object.set_position(Isometry2::new(cube.position, (cube.rotation + 270.0).to_radians()));
                             }
@@ -304,7 +326,8 @@ impl CubeManager {
                     to_bridge: self.to_bridge.clone(),
                     battery: 0,
                     going_around: self.going_around,
-                    last_move: Instant::now(),
+                    // last_message_time: Instant::now(),
+                    last_move_time: Instant::now(),
                     handle,
                     hit: false,
                 });
