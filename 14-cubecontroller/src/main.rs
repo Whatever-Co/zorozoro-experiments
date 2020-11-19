@@ -23,8 +23,47 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Instant;
 
-static KEYWORDS: phf::Map<&'static str, &'static str> = phf_map! {
-    "5F:90:B9:05:75:C7" => "01",
+static KEYWORDS: phf::Map<&'static str, u8> = phf_map! {
+    "5F:90:B9:05:75:C7" => 2,
+    "F4:42:25:51:B1:D3" => 3,
+    "DD:7D:38:81:17:F0" => 4,
+    "B8:2D:EF:D0:98:F9" => 5,
+    "DB:50:CE:44:13:C7" => 6,
+    "16:28:24:D9:FC:F2" => 7,
+    "32:08:D9:78:82:FC" => 8,
+    "FA:96:CF:08:0B:C6" => 9,
+    "B6:80:27:95:9F:C3" => 10,
+    "89:8E:5C:D5:B8:C2" => 11,
+    "61:71:54:F2:BB:C8" => 12,
+    "50:0E:56:D8:80:D8" => 13,
+    "A7:B0:E1:B4:30:FD" => 14,
+    "D9:31:03:8A:9A:FD" => 15,
+    "192.168.2.45" => 2,
+    "192.168.2.36" => 3,
+    "192.168.2.44" => 4,
+    "192.168.2.43" => 5,
+    "192.168.2.48" => 6,
+    "192.168.2.26" => 7,
+    "192.168.2.37" => 8,
+    "192.168.2.35" => 9,
+    "192.168.2.38" => 10,
+    "192.168.2.39" => 11,
+    "192.168.2.41" => 12,
+    "192.168.2.42" => 13,
+    "192.168.2.47" => 14,
+    "192.168.2.40" => 15,
+    "192.168.2.51" => 16,
+    "192.168.2.52" => 17,
+    "192.168.2.53" => 18,
+    "192.168.2.54" => 19,
+    "192.168.2.62" => 20,
+    "192.168.2.55" => 21,
+    "192.168.2.56" => 22,
+    "192.168.2.61" => 23,
+    "192.168.2.60" => 24,
+    "192.168.2.57" => 25,
+    "192.168.2.58" => 26,
+    "192.168.2.59" => 27,
 };
 
 const DOTS_PER_METER: f64 = 411.0 / 0.560;
@@ -49,7 +88,7 @@ struct Cube {
 
 #[derive(Debug, Clone)]
 struct Bridge {
-    id: &'static str,
+    id: u8,
     cubes: HashMap<String, Cube>,
     last_message_time: Instant,
 }
@@ -153,16 +192,14 @@ impl App<'_> {
             match message {
                 Message::Available(ip_address, _, mac_address) => {
                     let key: &str = &mac_address;
-                    let b = self
-                        .bridges
+                    self.bridges
                         .entry(ip_address)
                         .and_modify(|bridge| bridge.last_message_time = Instant::now())
                         .or_insert_with(|| Bridge {
-                            id: *KEYWORDS.get(key).unwrap_or(&"--"),
+                            id: *KEYWORDS.get(key).unwrap_or(&0),
                             cubes: HashMap::with_capacity(10),
                             last_message_time: Instant::now(),
                         });
-                    trace!("bridge={:?}", b);
                 }
 
                 Message::Connected(bridge_address, cube_address) => {
@@ -258,10 +295,13 @@ impl App<'_> {
             let stroke = rectangle::square(0.0, 0.0, 9.0);
             let mut y = 100.0;
             let now = Instant::now();
-            for (_, bridge) in self.bridges.clone().iter() {
+            let mut bridges = self.bridges.values().cloned().collect::<Vec<_>>();
+            bridges.sort_by(|a, b| a.id.cmp(&b.id));
+            for bridge in bridges {
                 let dt = now - bridge.last_message_time;
                 let color = [1.0, 1.0, 1.0, (1.0 - dt.as_secs_f32() / 3.0).max(0.4).min(1.0)];
-                self.draw_text(&context, 10.0, y + 12.0, 12, &color, bridge.id);
+                let id_str = format!("{:02}", bridge.id);
+                self.draw_text(&context, 10.0, y + 12.0, 12, &color, &id_str);
                 y += 2.0;
                 let mut x = 30.0;
                 let gl = &mut self.gl;
