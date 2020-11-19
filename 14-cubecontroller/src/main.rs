@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate log;
+extern crate phf;
 
 mod bridge;
 mod bridge_manager;
@@ -13,6 +14,7 @@ use env_logger::{Builder, Env};
 use glutin::dpi::PhysicalSize;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, GlyphCache, OpenGL, TextureSettings};
+use phf::phf_map;
 use piston::event_loop::{EventSettings, Events};
 use piston::input::{Button, ButtonArgs, ButtonEvent, ButtonState, Key, RenderArgs, RenderEvent, ResizeEvent, UpdateArgs, UpdateEvent};
 use piston::window::WindowSettings;
@@ -20,6 +22,10 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::HashMap;
 use std::thread;
 use std::time::Instant;
+
+static KEYWORDS: phf::Map<&'static str, &'static str> = phf_map! {
+    "5F:90:B9:05:75:C7" => "01",
+};
 
 const DOTS_PER_METER: f64 = 411.0 / 0.560;
 const CUBE_SIZE: f64 = 0.0318 * DOTS_PER_METER; // 31.8mm
@@ -43,6 +49,7 @@ struct Cube {
 
 #[derive(Debug, Clone)]
 struct Bridge {
+    id: &'static str,
     cubes: HashMap<String, Cube>,
     last_message_time: Instant,
 }
@@ -144,14 +151,18 @@ impl App<'_> {
     fn update(&mut self, _args: &UpdateArgs) {
         for message in self.receiver.as_mut().unwrap().try_iter() {
             match message {
-                Message::Available(address, _) => {
-                    self.bridges
-                        .entry(address)
+                Message::Available(ip_address, _, mac_address) => {
+                    let key: &str = &mac_address;
+                    let b = self
+                        .bridges
+                        .entry(ip_address)
                         .and_modify(|bridge| bridge.last_message_time = Instant::now())
                         .or_insert_with(|| Bridge {
+                            id: *KEYWORDS.get(key).unwrap_or(&"--"),
                             cubes: HashMap::with_capacity(10),
                             last_message_time: Instant::now(),
                         });
+                    trace!("bridge={:?}", b);
                 }
 
                 Message::Connected(bridge_address, cube_address) => {
@@ -247,12 +258,12 @@ impl App<'_> {
             let stroke = rectangle::square(0.0, 0.0, 9.0);
             let mut y = 100.0;
             let now = Instant::now();
-            for (address, bridge) in self.bridges.clone().iter() {
+            for (_, bridge) in self.bridges.clone().iter() {
                 let dt = now - bridge.last_message_time;
                 let color = [1.0, 1.0, 1.0, (1.0 - dt.as_secs_f32() / 3.0).max(0.4).min(1.0)];
-                self.draw_text(&context, 10.0, y + 12.0, 12, &color, &address);
+                self.draw_text(&context, 10.0, y + 12.0, 12, &color, bridge.id);
                 y += 2.0;
-                let mut x = 90.0;
+                let mut x = 30.0;
                 let gl = &mut self.gl;
                 for cube in bridge.cubes.values() {
                     let dt = now - cube.last_message_time;

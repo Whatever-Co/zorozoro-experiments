@@ -22,7 +22,7 @@ pub enum IDInfo {
 #[derive(Debug, Clone)]
 pub enum Message {
     NewCubeFound(String),
-    Available(String, usize),
+    Available(String, usize, String),
     Connected(String, String),
     Disconnected(String, String),
     IDInfo(String, IDInfo),
@@ -124,7 +124,7 @@ impl Bridge {
                     self.mode = BridgeMode::Bridge;
                     let slots = payload[0] as usize;
                     info!("Available slots of {} is {}", self.address, slots);
-                    Message::Available(self.address.clone(), slots)
+                    Message::Available(self.address.clone(), slots, address)
                 }
 
                 "connected" => {

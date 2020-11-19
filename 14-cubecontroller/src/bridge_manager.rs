@@ -67,16 +67,17 @@ impl BridgeManager {
     fn process_message(&mut self, message: &Message) {
         match message {
             Message::NewCubeFound(_) => {
+                trace!("{:?}", self.bridges);
                 if let Some((bridge_address, _slots)) = self.bridges.pop() {
                     self.send_message(&bridge_address, message);
                 }
             }
 
-            Message::Available(address, slots) => {
+            Message::Available(ip_address, slots, _) => {
                 if *slots > 0 {
-                    match self.bridges.iter().position(|(addr, _)| addr == address) {
+                    match self.bridges.iter().position(|(addr, _)| addr == ip_address) {
                         Some(index) => self.bridges[index].1 = *slots,
-                        None => self.bridges.push((address.clone(), *slots)),
+                        None => self.bridges.push((ip_address.clone(), *slots)),
                     }
                     self.bridges.sort_by(|a, b| a.1.cmp(&b.1));
                     // debug!("{:?}", self.bridges);
