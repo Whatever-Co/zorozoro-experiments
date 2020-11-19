@@ -104,9 +104,9 @@ void setup()
     if (Ethernet.begin(mac) == 0)
     {
         Serial.println("Failed to configure Ethernet using DHCP");
-        delay(3000);
-        while (true)
-        {
+        while (true) {
+            digitalToggle(LED_RED);
+            delay(300);
         }
     }
     Serial.print("  DHCP assigned IP ");
