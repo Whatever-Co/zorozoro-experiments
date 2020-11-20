@@ -18,7 +18,10 @@ pub const HIT_LEN: f64 = 0.020 * DOTS_PER_METER; // 20mm
 // const MAT_MIN: [f32; 2] = [98.0, 142.0];
 // const MAT_MAX: [f32; 2] = [402.0, 358.0];
 // #05-12
-const MAT_MIN: [f32; 2] = [340.0, 35.0];
+// const MAT_MIN: [f32; 2] = [340.0, 35.0];
+// const MAT_MAX: [f32; 2] = [949.0, 898.0];
+// #01-12
+const MAT_MIN: [f32; 2] = [34.0, 35.0];
 const MAT_MAX: [f32; 2] = [949.0, 898.0];
 const MAT_SIZE: [f32; 2] = [MAT_MAX[0] - MAT_MIN[0], MAT_MAX[1] - MAT_MIN[1]];
 const MAT_CENTER: [f32; 2] = [(MAT_MIN[0] + MAT_MAX[0]) / 2.0, (MAT_MIN[1] + MAT_MAX[1]) / 2.0];
