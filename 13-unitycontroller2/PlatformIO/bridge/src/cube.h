@@ -127,6 +127,7 @@ class Cube {
         Serial.println("Characteristic Found");
 #endif
 
+#if 1
         Serial.print("Discovering Configuration Characteristic ... ");
         configuration_ = std::make_shared<BLEClientCharacteristic>(ConfigurationCharacteristicUUID);
         configuration_->begin();
@@ -138,9 +139,14 @@ class Cube {
         // configuration_->enableNotify();
         Serial.println("Characteristic Found");
         {
-            uint8_t data[] = {0x18, 0x00, 20, 0x01};
+            uint8_t data[] = {0x18, 0x00, 20, 0xff};
             configuration_->write_resp(data, sizeof(data));
         }
+        {
+            uint8_t data[] = {0x19, 0x00, 50}; // 500ms 
+            configuration_->write_resp(data, sizeof(data));
+        }
+#endif
 
 #ifdef ENABLE_LAMP
         lamp_control_->SetColor(255, 255, 255);
