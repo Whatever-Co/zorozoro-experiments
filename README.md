@@ -13,8 +13,8 @@ https://twitter.com/Saqoosha/status/1333233470143774720
 | Module          | Role                                                                                              | Source code                                                                    |
 | --------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Cube Controller | Collects information from the Scanner and Bridge and sends out appropriate commands to each cube. | [`14-cubecontroller`](14-cubecontroller)                                       |
-| Bridge          | Make a BLE connection with toio cubes and relay with Controller through TCP socket.               | [`13-unitycontroller2/Arduino/bridge/`](13-unitycontroller2/Arduino/bridge/)   |
-| Scanner         | Detects a cube emitting an advertising signal and tells the contoller.                            | [`13-unitycontroller2/Arduino/scanner/`](13-unitycontroller2/Arduino/scanner/) |
+| Bridge          | Make a BLE connection with toio cubes and relay with Controller through TCP socket.               | [`13-unitycontroller2/PlatformIO/bridge/`](13-unitycontroller2/Arduino/bridge/)   |
+| Scanner         | Detects a cube emitting an advertising signal and tells the contoller.                            | [`13-unitycontroller2/PlatformIO/scanner/`](13-unitycontroller2/Arduino/scanner/) |
 
 ## Hardware
 
